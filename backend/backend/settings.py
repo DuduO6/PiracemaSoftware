@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'register',
     'home',
     'caminhoes',
+    'motoristas',
 ]
 
 MIDDLEWARE = [

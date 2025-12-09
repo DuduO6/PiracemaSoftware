@@ -4,6 +4,8 @@ from .models import Caminhao
 from .serializers import CaminhaoSerializer
 
 class CaminhaoViewSet(viewsets.ModelViewSet):
-    queryset = Caminhao.objects.all()
     serializer_class = CaminhaoSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Caminhao.objects.filter(usuario=self.request.user)

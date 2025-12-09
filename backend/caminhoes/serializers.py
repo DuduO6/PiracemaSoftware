@@ -9,6 +9,9 @@ class CarretaSerializer(serializers.ModelSerializer):
 
 
 class CaminhaoSerializer(serializers.ModelSerializer):
+    usuario = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+
     carretas = CarretaSerializer(many=True, read_only=True)
 
     class Meta:

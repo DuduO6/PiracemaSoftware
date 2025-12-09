@@ -1,6 +1,13 @@
 from django.db import models
+from django.contrib.auth import get_user_model
+
+
+User = get_user_model()
 
 class Caminhao(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="caminhoes")
+
+
     nome_conjunto = models.CharField(max_length=100, blank=True, null=True)
     placa_cavalo = models.CharField(max_length=10, blank=True, null=True)
     renavam_cavalo = models.CharField(max_length=20, blank=True, null=True)
