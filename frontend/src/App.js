@@ -1,14 +1,29 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Register from "./components/Register.jsx";  
-import Login from "./components/Login.jsx";        
-import Home from "./components/Home.jsx";          
+import Register from "./components/Register.jsx";
+import Login from "./components/Login.jsx";
+import Home from "./components/Home.jsx";
+import Caminhoes from "./components/Caminhoes.jsx";
+import NovoCaminhao from "./components/NovoCaminhao.jsx";
+import CaminhaoDetalhes from "./components/CaminhaoDetalhes.jsx";
+import Layout from "./components/Layout.jsx";
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/register" element={<Register />} />
+
+        {/* Sem sidebar */}
         <Route path="/login" element={<Login />} />
-        <Route path="/home" element={<Home />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Com sidebar */}
+        <Route element={<Layout />}>
+          <Route path="/home" element={<Home />} />
+          <Route path="/caminhoes" element={<Caminhoes />} />
+          <Route path="/caminhoes/novo" element={<NovoCaminhao />} />
+          <Route path="/caminhoes/:id" element={<CaminhaoDetalhes />} />
+        </Route>
+
       </Routes>
     </BrowserRouter>
   );

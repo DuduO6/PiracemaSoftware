@@ -1,0 +1,188 @@
+/* Layout wrapper */
+.layout-wrapper {
+  font-family: "Montserrat", sans-serif;
+  background: #000;
+  color: #E5E7EB;
+  min-height: 100vh;
+  display: flex;
+}
+
+/* ======= OVERLAY (para mobile quando sidebar aberta) ======= */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s;
+  z-index: 900;
+}
+.overlay.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ======= SIDEBAR ======= */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 260px;
+  height: 100vh;
+  background-color: #0f1724;
+  padding: 24px 18px;
+  transform: translateX(-100%);
+  transition: transform 0.28s cubic-bezier(.2,.9,.2,1);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+/* aberto */
+.sidebar.open {
+  transform: translateX(0);
+}
+
+/* header do sidebar */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+/* logo */
+.sidebar-logo {
+  height: 42px;
+  width: auto;
+  display: block;
+}
+
+/* botão fechar */
+.close-btn {
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 6px;
+}
+.close-btn:hover { 
+  color: #fff; 
+  transform: scale(1.03); 
+}
+
+/* lista de menu */
+.menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+/* transformamos os itens em botões */
+.menu-list li { 
+  margin: 0; 
+  padding: 0; 
+}
+
+.menu-btn {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  letter-spacing: .4px;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.08s ease;
+}
+
+.menu-btn:hover {
+  background: rgba(255,255,255,0.03);
+  color: #fff;
+  transform: translateX(4px);
+}
+
+.menu-btn.active {
+  background: linear-gradient(90deg, rgba(99,102,241,0.12), rgba(99,102,241,0.06));
+  color: #e0e7ff;
+  box-shadow: inset 0 0 0 1px rgba(99,102,241,0.055);
+}
+
+/* divisor */
+.divider {
+  border: none;
+  height: 1px;
+  background: rgba(255,255,255,0.04);
+  margin: 14px 0;
+}
+
+/* ======= BOTÃO DE ABRIR MENU (desktop e mobile) ======= */
+.open-menu-btn {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  background-color: #0f1724;
+  color: #e6eef8;
+  border: 1px solid rgba(255,255,255,0.04);
+  padding: 10px 12px;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 8px;
+  z-index: 1100;
+  transition: transform .12s ease, background .12s;
+}
+
+.open-menu-btn:hover { 
+  transform: translateY(-1px); 
+}
+
+/* opcional: esconder botão em desktop quando a sidebar estiver aberta */
+.open-menu-btn.hidden-on-desktop {
+  display: none;
+}
+
+/* ======= CONTEÚDO PRINCIPAL ======= */
+.main-content {
+  margin-left: 0;
+  flex: 1;
+  min-height: 100vh;
+  transition: margin-left 0.28s cubic-bezier(.2,.9,.2,1);
+  width: 100%;
+}
+
+/* empurra conteúdo quando sidebar aberta em desktop */
+.main-content.sidebar-open {
+  margin-left: 260px;
+}
+
+/* responsividade */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 78%;
+    max-width: 320px;
+    transform: translateX(-110%);
+  }
+  
+  .sidebar.open { 
+    transform: translateX(0); 
+  }
+
+  /* quando aberto, não empurra o conteúdo em mobile */
+  .main-content.sidebar-open { 
+    margin-left: 0; 
+  }
+
+  /* botão abrir sempre visível no mobile */
+  .open-menu-btn.hidden-on-desktop { 
+    display: inline-block; 
+  }
+}

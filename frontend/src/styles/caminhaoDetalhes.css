@@ -1,0 +1,112 @@
+.detalhes-container {
+  background: #000;
+  min-height: 100vh;
+  padding: 40px;
+  color: white;
+}
+
+.voltar-btn {
+  margin-bottom: 40px;
+}
+
+.info-card {
+  background: #1a1a1a;
+  padding: 40px;
+  border-radius: 40px;
+  max-width: 1200px;
+}
+
+.card-titulo {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 35px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #333;
+}
+
+.info-section {
+  margin-bottom: 35px;
+}
+
+.info-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-titulo {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #ffffff;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-label {
+  font-size: 14px;
+  color: #999;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 18px;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.carretas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.carreta-item {
+  background: #0a0a0a;
+  padding: 25px;
+  border-radius: 20px;
+  border: 1px solid #2a2a2a;
+}
+
+.carreta-numero {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: #ffffff;
+}
+
+.no-carretas {
+  color: #666;
+  font-size: 16px;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .detalhes-container {
+    padding: 20px;
+  }
+
+  .info-card {
+    padding: 25px;
+  }
+
+  .card-titulo {
+    font-size: 24px;
+  }
+
+  .section-titulo {
+    font-size: 20px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,74 @@
+.caminhoes-container {
+  background: #000;
+  min-height: 100vh;
+  padding: 40px;
+  color: white;
+}
+
+.titulo {
+  font-size: 48px;
+  margin-bottom: 30px;
+  font-weight: 800;
+}
+
+.btn-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.white-btn {
+  background: white;
+  color: black;
+  padding: 12px 36px;
+  border-radius: 40px;
+  font-size: 20px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.white-btn:hover {
+  transform: scale(1.05);
+  background: #e6e6e6;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 35px;
+}
+
+.caminhao-card {
+  background: #1a1a1a;
+  padding: 35px;
+  border-radius: 40px;
+  min-height: 230px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.caminhao-nome {
+  font-size: 26px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.info-link {
+  margin-top: 20px;
+  display: block;
+  color: white;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
