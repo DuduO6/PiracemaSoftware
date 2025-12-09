@@ -1,38 +1,37 @@
-from rest_framework import generics
-from .serializers import RegisterSerializer
+from rest_framework import generics, status
+from rest_framework.response import Response
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.response import Response
+
+from .serializers import RegisterSerializer, LoginSerializer
+
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
 
 
-class LoginView(generics.GenericAPIView):
+class LoginView(generics.GenericAPIView):   # <--- AQUI ERA O ERRO
+    serializer_class = LoginSerializer
+
     def post(self, request):
-        username_or_email = request.data.get("user")
-        password = request.data.get("password")
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        # tenta login por username
-        user = authenticate(username=username_or_email, password=password)
+        username = serializer.validated_data["username"]
+        password = serializer.validated_data["password"]
 
-        # tenta login por email
-        if user is None:
-            from django.contrib.auth import get_user_model
-            User = get_user_model()
-            try:
-                u = User.objects.get(email=username_or_email)
-                user = authenticate(username=u.username, password=password)
-            except User.DoesNotExist:
-                user = None
+        user = authenticate(username=username, password=password)
 
         if user is None:
-            return Response({"error": "Credenciais inválidas"}, status=400)
+            return Response(
+                {"error": "Credenciais inválidas"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
 
         refresh = RefreshToken.for_user(user)
+
         return Response({
-            "refresh": str(refresh),
+            "message": "Login realizado com sucesso",
             "access": str(refresh.access_token),
-            "username": user.username,
-            "email": user.email
+            "refresh": str(refresh),
         })
