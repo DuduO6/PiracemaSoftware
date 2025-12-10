@@ -9,7 +9,8 @@ function Home() {
     lucro: 0
   });
 
-  // 🔥 CARREGAR DADOS DA API
+  const [username, setUsername] = useState("");
+
   useEffect(() => {
     const token = localStorage.getItem("access");
 
@@ -18,22 +19,25 @@ function Home() {
       return;
     }
 
+    // 🔹 1) Buscar dados do dashboard
     api.get("/api/", {
-      headers: {
-        Authorization: `Bearer ${token}`
-      }
+      headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => {
-        setDashboardData(res.data);
-      })
+      .then(res => setDashboardData(res.data))
       .catch(err => {
         console.error("Erro carregando API:", err);
-
-        // token expirado -> tentar renovar
         if (err.response?.status === 401 || err.response?.status === 403) {
           window.location.href = "/";
         }
       });
+
+    // 🔹 2) Buscar username do usuário logado
+    api.get("/auth/user/", {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+      .then(res => setUsername(res.data.username))
+      .catch(() => setUsername("Usuário"));
+
   }, []);
 
   return (
@@ -41,11 +45,10 @@ function Home() {
       <header className="dashboard-header">
         <h1>Home</h1>
         <div className="user-info">
-          <span>Olá, usuário</span>
+          <span>Olá, {username}</span>
         </div>
       </header>
 
-      {/* 🔥 AGORA OS VALORES SÃO REAIS */}
       <section className="cards-row">
         <div className="info-block">
           <h2>FATURAMENTO (MÊS)</h2>

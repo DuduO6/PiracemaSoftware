@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import permissions
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
 
 from .serializers import RegisterSerializer, LoginSerializer
 
@@ -51,3 +53,14 @@ class LoginView(generics.GenericAPIView):
             "access": str(refresh.access_token),
             "refresh": str(refresh),
         }, status=status.HTTP_200_OK)
+    
+class UserDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        return Response({
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+        })

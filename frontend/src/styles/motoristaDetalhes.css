@@ -1,0 +1,317 @@
+.detalhes-container {
+  background: #000;
+  min-height: 100vh;
+  padding: 40px;
+  color: white;
+}
+
+.voltar-btn {
+  margin-bottom: 40px;
+}
+
+.info-card {
+  background: #1a1a1a;
+  padding: 40px;
+  border-radius: 40px;
+  max-width: 1200px;
+}
+
+.card-titulo {
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 35px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #333;
+}
+
+.info-section {
+  margin-bottom: 35px;
+}
+
+.info-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-titulo {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #ffffff;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.info-label {
+  font-size: 14px;
+  color: #999;
+  font-weight: 500;
+}
+
+.info-value {
+  font-size: 18px;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.no-caminhao {
+  color: #666;
+  font-size: 16px;
+  font-style: italic;
+}
+
+/* Estilos específicos para o caminhão vinculado */
+.caminhao-vinculado {
+  background: #0a0a0a;
+  padding: 30px;
+  border-radius: 20px;
+  border: 1px solid #2a2a2a;
+}
+
+.caminhao-header {
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.caminhao-nome-destaque {
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.carretas-resumo {
+  margin-top: 30px;
+  padding-top: 25px;
+  border-top: 1px solid #2a2a2a;
+}
+
+.carretas-titulo {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #ffffff;
+}
+
+.carretas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.carreta-item {
+  background: #000000;
+  padding: 20px;
+  border-radius: 15px;
+  border: 1px solid #1a1a1a;
+}
+
+.carreta-numero {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: #ffffff;
+}
+
+/* Estilos para vales */
+.vales-resumo {
+  background: #0a0a0a;
+  padding: 20px;
+  border-radius: 15px;
+  border: 1px solid #2a2a2a;
+}
+
+.total-vales {
+  font-size: 20px;
+  color: #ffffff;
+  margin: 0;
+}
+
+.total-vales strong {
+  color: #4CAF50;
+  font-size: 24px;
+}
+
+.no-vales {
+  color: #666;
+  font-size: 16px;
+  font-style: italic;
+}
+
+/* Tabela de vales */
+.vales-table-container {
+  overflow-x: auto;
+  background: #0a0a0a;
+  border-radius: 15px;
+  border: 1px solid #2a2a2a;
+}
+
+.vales-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vales-table thead {
+  background: #000000;
+}
+
+.vales-table th {
+  padding: 15px;
+  text-align: left;
+  font-weight: 600;
+  color: #ffffff;
+  border-bottom: 2px solid #2a2a2a;
+}
+
+.vales-table td {
+  padding: 15px;
+  border-bottom: 1px solid #1a1a1a;
+  color: #ffffff;
+}
+
+.vales-table tbody tr:hover {
+  background: #111111;
+}
+
+.vales-table tbody tr.vale-pago {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.checkbox-pago {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #4CAF50;
+}
+
+.checkbox-pago:disabled {
+  cursor: not-allowed;
+}
+
+/* Botões de ação na tabela */
+.acoes-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-editar-mini,
+.btn-remover-mini,
+.btn-salvar-mini,
+.btn-cancelar-mini {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-editar-mini {
+  background: #2196F3;
+  color: white;
+}
+
+.btn-editar-mini:hover {
+  background: #1976D2;
+}
+
+.btn-remover-mini {
+  background: #f44336;
+  color: white;
+}
+
+.btn-remover-mini:hover {
+  background: #d32f2f;
+}
+
+.btn-salvar-mini {
+  background: #4CAF50;
+  color: white;
+}
+
+.btn-salvar-mini:hover {
+  background: #388E3C;
+}
+
+.btn-cancelar-mini {
+  background: #757575;
+  color: white;
+}
+
+.btn-cancelar-mini:hover {
+  background: #616161;
+}
+
+/* Inputs de edição na tabela */
+.edit-input {
+  width: 100%;
+  padding: 8px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 5px;
+  color: white;
+  font-size: 14px;
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: #2196F3;
+}
+
+@media (max-width: 768px) {
+  .detalhes-container {
+    padding: 20px;
+  }
+
+  .info-card {
+    padding: 25px;
+  }
+
+  .card-titulo {
+    font-size: 24px;
+  }
+
+  .section-titulo {
+    font-size: 20px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .caminhao-vinculado {
+    padding: 20px;
+  }
+
+  .caminhao-nome-destaque {
+    font-size: 18px;
+  }
+
+  .carretas-titulo {
+    font-size: 16px;
+  }
+
+  .vales-table-container {
+    font-size: 14px;
+  }
+
+  .vales-table th,
+  .vales-table td {
+    padding: 10px;
+  }
+
+  .acoes-buttons {
+    flex-direction: column;
+  }
+}

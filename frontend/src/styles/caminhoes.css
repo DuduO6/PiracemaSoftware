@@ -66,6 +66,202 @@
   text-align: center;
 }
 
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Modal Card */
+.modal-edicao {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-edicao h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* Form Groups */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #ff6b00;
+}
+
+/* Modal Buttons */
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 25px;
+}
+
+.btn-salvar,
+.btn-cancelar {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-salvar {
+  background-color: #4caf50;
+  color: white;
+}
+
+.btn-salvar:hover {
+  background-color: #45a049;
+}
+
+.btn-cancelar {
+  background-color: #f44336;
+  color: white;
+}
+
+.btn-cancelar:hover {
+  background-color: #da190b;
+}
+
+/* Avisos e Modo Edição */
+.modo-edicao-aviso {
+  text-align: center;
+  color: #ff6b00;
+  font-weight: bold;
+  margin: 15px 0;
+}
+
+.white-btn.active {
+  background-color: #ff6b00;
+  color: white;
+}
+
+.caminhao-card.editavel:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s;
+}
+
+/* Subtítulo dentro do modal */
+.subtitulo-modal {
+  margin-top: 20px;
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 18px;
+  border-bottom: 2px solid #ff6b00;
+  padding-bottom: 5px;
+}
+
+/* Cards de CRLV dentro do modal */
+.crlv-card-modal {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+}
+
+.crlv-card-modal h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #555;
+  font-size: 16px;
+}
+
+/* Input de arquivo */
+.file-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.file-input::-webkit-file-upload-button {
+  background-color: #ff6b00;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-right: 10px;
+}
+
+.file-input::-webkit-file-upload-button:hover {
+  background-color: #e55f00;
+}
+
+/* Modo remoção */
+.modo-remocao-aviso {
+  text-align: center;
+  color: #f44336;
+  font-weight: bold;
+  margin: 15px 0;
+}
+
+.white-btn.active-remover {
+  background-color: #f44336;
+  color: white;
+}
+
+.caminhao-card.removivel {
+  transition: all 0.2s;
+  border: 2px solid transparent;
+}
+
+.caminhao-card.removivel:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(244, 67, 54, 0.3);
+  border-color: #f44336;
+}
+
+/* Efeito diferente para edição */
+.caminhao-card.editavel:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(255, 107, 0, 0.3);
+  border-color: #ff6b00;
+  transition: all 0.2s;
+}
+
 @media (max-width: 900px) {
   .cards-grid {
     grid-template-columns: 1fr;

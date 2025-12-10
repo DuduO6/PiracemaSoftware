@@ -8,6 +8,7 @@ import CaminhaoDetalhes from "./components/CaminhaoDetalhes.jsx";
 import Layout from "./components/Layout.jsx";
 import Motoristas from "./components/Motoristas.jsx";
 import NovoMotorista from "./components/NovoMotorista.jsx";
+import MotoristaDetalhes from "./components/MotoristaDetalhes.jsx";
 
 function App() {
   return (
@@ -26,7 +27,7 @@ function App() {
           <Route path="/caminhoes/:id" element={<CaminhaoDetalhes />} />
           <Route path="/motoristas" element={<Motoristas />} />
           <Route path="/motoristas/novo" element={<NovoMotorista />} />
-
+          <Route path="/motoristas/:id" element={<MotoristaDetalhes />} />
 
         </Route>
 
