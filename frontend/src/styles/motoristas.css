@@ -103,14 +103,15 @@
 
 /* Modal Card */
 .modal-edicao {
-  background: white;
+  background: #1a1a1a;
   padding: 30px;
-  border-radius: 10px;
+  border-radius: 20px;
   width: 90%;
   max-width: 500px;
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  border: 1px solid #333;
 }
 
 .modal-edicao h2 {

@@ -366,17 +366,6 @@ function Motoristas() {
             </div>
 
             <div className="form-group">
-              <label>Descrição:</label>
-              <textarea
-                name="descricao"
-                value={valeData.descricao}
-                onChange={handleValeInputChange}
-                placeholder="Descrição do vale (opcional)"
-                rows="3"
-              />
-            </div>
-
-            <div className="form-group">
               <label>Data:</label>
               <input
                 type="date"

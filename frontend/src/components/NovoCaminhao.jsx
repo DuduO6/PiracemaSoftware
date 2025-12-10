@@ -129,12 +129,6 @@ function NovoCaminhao() {
               className="input"
             />
 
-            <label>CRLV (opcional)</label>
-            <input
-              type="file"
-              onChange={(e) => updatePlaca(index, "crlv", e.target.files[0])}
-              className="file-input"
-            />
           </div>
         ))}
 

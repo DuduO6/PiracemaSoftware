@@ -5,44 +5,41 @@ import json
 class CarretaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Carreta
-        fields = ["id", "placa", "renavam", "crlv"]
+        fields = ["id", "placa", "renavam"]
 
 
 class CaminhaoSerializer(serializers.ModelSerializer):
     usuario = serializers.HiddenField(default=serializers.CurrentUserDefault())
-
-
     carretas = CarretaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Caminhao
         fields = "__all__"
-        extra_kwargs = {
-            "nome_conjunto": {"required": False},
-            "placa_cavalo": {"required": False},
-            "renavam_cavalo": {"required": False},
-            "marca_modelo": {"required": False},
-        }
 
     def create(self, validated_data):
         request = self.context["request"]
 
-        # cria caminhão sem extrair nada do PDF
+        # cria caminhão
         caminhao = Caminhao.objects.create(**validated_data)
 
-        # recebe carretas se houver
-        carretas_json = json.loads(request.data.get("carretas", "[]"))
+        # recebe JSON do front
+        lista = json.loads(request.data.get("carretas", "[]"))
 
-        for idx, c in enumerate(carretas_json):
-            crlv_file = request.FILES.get(f"crlv_carreta_{idx}")
+        if len(lista) == 0:
+            return caminhao
 
+        # --- PRIMEIRA PLACA = CAVALO ---
+        primeiro = lista[0]
+        caminhao.placa_cavalo = primeiro.get("placa")
+        caminhao.renavam_cavalo = primeiro.get("renavam")
+        caminhao.save()
+
+        # --- DEMAIS = CARRETAS ---
+        for item in lista[1:]:
             Carreta.objects.create(
                 caminhao=caminhao,
-                placa=c.get("placa"),
-                renavam=c.get("renavam"),
-                crlv=crlv_file
+                placa=item.get("placa"),
+                renavam=item.get("renavam"),
             )
 
         return caminhao
-
-

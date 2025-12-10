@@ -168,7 +168,7 @@ function Caminhoes() {
 
   return (
     <div className="caminhoes-container">
-      <h1 className="titulo">CAMINHÕES</h1>
+      <h1 className="titulo">VEÍCULOS</h1>
 
       <div className="btn-row">
         <button className="white-btn" onClick={() => navigate("/caminhoes/novo")}>
@@ -273,14 +273,6 @@ function Caminhoes() {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label>CRLV (opcional)</label>
-                  <input
-                    type="file"
-                    onChange={(e) => updatePlaca(index, "crlv", e.target.files[0])}
-                    className="file-input"
-                  />
-                </div>
               </div>
             ))}
 

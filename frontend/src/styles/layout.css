@@ -32,10 +32,11 @@
   background-color: #0f1724;
   padding: 24px 18px;
   transform: translateX(-100%);
-  transition: transform 0.28s cubic-bezier(.2,.9,.2,1);
+  transition: transform 0.28s cubic-bezier(.2,.9,.2,1), width 0.28s cubic-bezier(.2,.9,.2,1);
   z-index: 1000;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* aberto */
@@ -57,6 +58,7 @@
   height: 42px;
   width: auto;
   display: block;
+  transition: opacity 0.2s ease;
 }
 
 /* botão fechar */
@@ -67,6 +69,7 @@
   font-size: 20px;
   cursor: pointer;
   padding: 6px;
+  flex-shrink: 0;
 }
 .close-btn:hover { 
   color: #fff; 
@@ -82,6 +85,7 @@
   flex-direction: column;
   gap: 8px;
   flex: 1;
+  transition: opacity 0.2s ease;
 }
 
 /* transformamos os itens em botões */
@@ -103,6 +107,7 @@
   font-size: 14px;
   letter-spacing: .4px;
   transition: background 0.15s ease, color 0.15s ease, transform 0.08s ease;
+  white-space: nowrap;
 }
 
 .menu-btn:hover {
@@ -145,7 +150,7 @@
   transform: translateY(-1px); 
 }
 
-/* opcional: esconder botão em desktop quando a sidebar estiver aberta */
+/* esconder botão em desktop quando a sidebar estiver aberta */
 .open-menu-btn.hidden-on-desktop {
   display: none;
 }
@@ -162,6 +167,48 @@
 /* empurra conteúdo quando sidebar aberta em desktop */
 .main-content.sidebar-open {
   margin-left: 260px;
+}
+
+/* ======= DESKTOP: SIDEBAR RETRAÍDA ======= */
+@media (min-width: 769px) {
+  /* Quando fechada no desktop, mostra apenas 60px */
+  .sidebar:not(.open) {
+    width: 60px;
+    padding: 24px 8px;
+    transform: translateX(0);
+  }
+
+  /* Esconde logo e menu quando retraída */
+  .sidebar:not(.open) .sidebar-logo {
+    opacity: 0;
+    width: 0;
+    visibility: hidden;
+  }
+
+  .sidebar:not(.open) .menu-list {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .sidebar:not(.open) .close-btn {
+    visibility: hidden;
+  }
+
+  /* Centraliza o botão X (que vira ☰) */
+  .sidebar:not(.open) .sidebar-header {
+    justify-content: center;
+  }
+
+  /* Botão de abrir sempre visível quando sidebar retraída */
+  .sidebar:not(.open) ~ .open-menu-btn {
+    display: inline-block;
+  }
+
+  /* Ajusta margem do conteúdo para sidebar retraída */
+  .main-content:not(.sidebar-open) {
+    margin-left: 60px;
+  }
 }
 
 /* responsividade */
