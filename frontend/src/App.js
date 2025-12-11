@@ -10,6 +10,7 @@ import Motoristas from "./components/Motoristas.jsx";
 import NovoMotorista from "./components/NovoMotorista.jsx";
 import MotoristaDetalhes from "./components/MotoristaDetalhes.jsx";
 import Viagens from "./components/Viagens.jsx";
+import Despesas from "./components/Despesas.jsx";
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="/motoristas/novo" element={<NovoMotorista />} />
           <Route path="/motoristas/:id" element={<MotoristaDetalhes />} />
           <Route path="/viagens" element={<Viagens />} />
+          <Route path="/despesas" element={<Despesas />} />
 
         </Route>
 

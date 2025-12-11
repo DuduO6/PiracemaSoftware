@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'caminhoes',
     'motoristas',
     'viagens',
+    'despesas',
 ]
 
 MIDDLEWARE = [
