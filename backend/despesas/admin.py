@@ -35,7 +35,7 @@ class DespesaAdmin(admin.ModelAdmin):
 
 @admin.register(FuncionarioDespesa)
 class FuncionarioDespesaAdmin(admin.ModelAdmin):
-    list_display = ('nome', 'cargo', 'salario_base', 'ativo', 'data_admissao')
+    list_display = ('nome', 'cargo', 'salario_mensal', 'ativo', 'data_admissao')
     actions = ['gerar_despesas_ano']
 
     def gerar_despesas_ano(self, request, queryset):
