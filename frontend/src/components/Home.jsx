@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "../styles/home.css";
 import api from "../api/api";
-import { Bar, Line } from "react-chartjs-2";
+import { Bar, Line, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   BarElement,
@@ -10,10 +10,20 @@ import {
   Tooltip,
   Legend,
   LineElement,
-  PointElement
+  PointElement,
+  ArcElement
 } from "chart.js";
 
-ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend, LineElement, PointElement);
+ChartJS.register(
+  BarElement, 
+  CategoryScale, 
+  LinearScale, 
+  Tooltip, 
+  Legend, 
+  LineElement, 
+  PointElement,
+  ArcElement
+);
 
 function Home() {
   const [data, setData] = useState({
@@ -25,11 +35,12 @@ function Home() {
     evolucao_diaria: []
   });
 
+  const [despesas, setDespesas] = useState([]);
   const [username, setUsername] = useState("");
   const [dias, setDias] = useState(30);
   const [dropdown, setDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState("grid"); // grid ou list
+  const [viewMode, setViewMode] = useState("grid");
 
   useEffect(() => {
     const token = localStorage.getItem("access");
@@ -47,15 +58,84 @@ function Home() {
       }),
       api.get("/auth/user/", {
         headers: { Authorization: `Bearer ${token}` }
+      }),
+      api.get("/api/despesas/despesas/", {
+        headers: { Authorization: `Bearer ${token}` }
       })
     ])
-      .then(([dashRes, userRes]) => {
+      .then(([dashRes, userRes, despesasRes]) => {
         setData(dashRes.data);
         setUsername(userRes.data.username);
+        setDespesas(despesasRes.data);
       })
       .catch(err => console.error("Erro carregando dashboard", err))
       .finally(() => setLoading(false));
   }, [dias]);
+
+  // Cálculos de despesas no período
+  const calcularDespesasPeriodo = () => {
+    const hoje = new Date();
+    const dataLimite = new Date();
+    dataLimite.setDate(hoje.getDate() - dias);
+
+    const despesasPeriodo = despesas.filter(d => {
+      const dataVencimento = new Date(d.data_vencimento);
+      return dataVencimento >= dataLimite && dataVencimento <= hoje;
+    });
+
+    const total = despesasPeriodo.reduce((acc, d) => {
+      const valor = d.tipo === "FIXA_ANUAL" 
+        ? Number(d.valor_total) / 12 
+        : Number(d.valor_total);
+      return acc + valor;
+    }, 0);
+
+    const pagas = despesasPeriodo.filter(d => d.status === "PAGO").reduce((acc, d) => {
+      const valor = d.tipo === "FIXA_ANUAL" 
+        ? Number(d.valor_total) / 12 
+        : Number(d.valor_total);
+      return acc + valor;
+    }, 0);
+
+    const pendentes = total - pagas;
+
+    return { total, pagas, pendentes, quantidade: despesasPeriodo.length };
+  };
+
+  const despesasInfo = calcularDespesasPeriodo();
+
+  // Balanço geral
+  const lucroOperacional = data.faturamento - despesasInfo.pagas;
+  const saldoPendente = lucroOperacional + data.total_vales_pendentes - despesasInfo.pendentes;
+  const margemLucro = data.faturamento > 0 
+    ? ((lucroOperacional / data.faturamento) * 100) 
+    : 0;
+
+  // Despesas por categoria (top 5)
+  const despesasPorCategoria = () => {
+    const categorias = {};
+    
+    despesas.forEach(d => {
+      const categoriaNome = d.categoria?.nome || "Sem categoria";
+      const valor = d.tipo === "FIXA_ANUAL" 
+        ? Number(d.valor_total) / 12 
+        : Number(d.valor_total);
+      
+      if (!categorias[categoriaNome]) {
+        categorias[categoriaNome] = {
+          valor: 0,
+          cor: d.categoria?.cor || "#9e9e9e"
+        };
+      }
+      categorias[categoriaNome].valor += valor;
+    });
+
+    return Object.entries(categorias)
+      .sort((a, b) => b[1].valor - a[1].valor)
+      .slice(0, 5);
+  };
+
+  const topCategorias = despesasPorCategoria();
 
   const chartData = {
     labels: data.ranking_motoristas.map(item => item.motorista__nome),
@@ -68,6 +148,18 @@ function Home() {
         borderWidth: 1,
         borderRadius: 8,
         barThickness: 60
+      }
+    ]
+  };
+
+  const despesasChartData = {
+    labels: topCategorias.map(([nome]) => nome),
+    datasets: [
+      {
+        data: topCategorias.map(([, data]) => data.valor),
+        backgroundColor: topCategorias.map(([, data]) => data.cor),
+        borderColor: "#1E1E1E",
+        borderWidth: 2
       }
     ]
   };
@@ -101,6 +193,37 @@ function Home() {
     }
   };
 
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: {
+          color: '#9CA3AF',
+          font: { size: 11 },
+          padding: 15,
+          usePointStyle: true
+        }
+      },
+      tooltip: {
+        backgroundColor: "rgba(17, 24, 39, 0.95)",
+        padding: 12,
+        borderColor: "rgba(99, 102, 241, 0.3)",
+        borderWidth: 1,
+        titleColor: "#E5E7EB",
+        bodyColor: "#9CA3AF",
+        callbacks: {
+          label: function(context) {
+            const label = context.label || '';
+            const value = context.parsed || 0;
+            return `${label}: R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+          }
+        }
+      }
+    }
+  };
+
   const ticketMedio = data.viagens > 0 ? data.faturamento / data.viagens : 0;
 
   return (
@@ -116,7 +239,7 @@ function Home() {
         </div>
       </header>
 
-      {/* Seleção de período com design melhorado */}
+      {/* Seleção de período */}
       <section className="periodo-container">
         <label>Período de análise:</label>
         <div className="periodo-controls">
@@ -161,7 +284,7 @@ function Home() {
         </div>
       ) : (
         <>
-          {/* CARDS com mais informações */}
+          {/* CARDS DE RECEITA */}
           <section className="cards-row">
             <div className="info-block primary">
               <div className="block-icon">💰</div>
@@ -202,24 +325,136 @@ function Home() {
             </div>
           </section>
 
-          {/* Gráfico de ranking */}
-          <section className="content-area chart-container">
-            <div className="section-header">
-              <h3>🏆 Ranking de Motoristas</h3>
-              <span className="badge">{dias} dias</span>
+          {/* CARDS DE DESPESAS */}
+          <section className="cards-row">
+            <div className="info-block danger">
+              <div className="block-icon">💳</div>
+              <div className="block-content">
+                <h2>Despesas Totais</h2>
+                <p className="value">R$ {despesasInfo.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+                <span className="period-label">{despesasInfo.quantidade} despesa(s)</span>
+              </div>
             </div>
-            {data.ranking_motoristas.length > 0 ? (
-              <div style={{ height: "320px" }}>
-                <Bar data={chartData} options={chartOptions} />
+
+            <div className="info-block success">
+              <div className="block-icon">✓</div>
+              <div className="block-content">
+                <h2>Despesas Pagas</h2>
+                <p className="value">R$ {despesasInfo.pagas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+                <span className="period-label">Últimos {dias} dias</span>
               </div>
-            ) : (
-              <div className="empty-state">
-                <p>Nenhuma viagem registrada no período selecionado.</p>
+            </div>
+
+            <div className="info-block warning">
+              <div className="block-icon">⏳</div>
+              <div className="block-content">
+                <h2>Despesas Pendentes</h2>
+                <p className="value red">
+                  R$ {despesasInfo.pendentes.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </p>
+                <span className="period-label">A vencer/vencidas</span>
               </div>
-            )}
+            </div>
           </section>
 
-          {/* Tabela de vales com controles */}
+          {/* BALANÇO GERAL */}
+          <section className="content-area">
+            <div className="section-header">
+              <h3>💼 Balanço Geral</h3>
+              <span className="badge">{dias} dias</span>
+            </div>
+
+            <table className="balanco-table">
+              <thead>
+                <tr>
+                  <th>Indicador</th>
+                  <th>Valor</th>
+                  <th>Fórmula</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr className="lucro">
+                  <td>
+                     <strong>Lucro Operacional</strong>
+                  </td>
+                  <td>
+                    R$ {Number(lucroOperacional || 0).toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td>Faturamento - Despesas Pagas</td>
+                </tr>
+
+                <tr className="margem">
+                  <td>
+                     <strong>Margem de Lucro</strong>
+                  </td>
+                  <td>
+                    {Number(margemLucro || 0).toFixed(1)}%
+                  </td>
+                  <td>Lucro / Faturamento × 100</td>
+                </tr>
+
+                <tr
+                  className={
+                    saldoPendente >= 0 ? "saldo-positivo" : "saldo-negativo"
+                  }
+                >
+                  <td>
+                    {saldoPendente >= 0 ? "✓" : "⚠️"}{" "}
+                    <strong>Saldo Projetado</strong>
+                  </td>
+                  <td>
+                    R$ {Number(saldoPendente || 0).toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td>Lucro + Vales Pendentes - Despesas Pendentes</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+
+          {/* GRÁFICOS LADO A LADO */}
+          <div className="charts-grid">
+            {/* Gráfico de ranking */}
+            <section className="content-area chart-container">
+              <div className="section-header">
+                <h3>🏆 Ranking de Motoristas</h3>
+                <span className="badge">{dias} dias</span>
+              </div>
+              {data.ranking_motoristas.length > 0 ? (
+                <div style={{ height: "320px" }}>
+                  <Bar data={chartData} options={chartOptions} />
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <p>Nenhuma viagem registrada no período selecionado.</p>
+                </div>
+              )}
+            </section>
+
+            {/* Gráfico de despesas por categoria */}
+            <section className="content-area chart-container">
+              <div className="section-header">
+                <h3>💳 Despesas por Categoria</h3>
+                <span className="badge">Top 5</span>
+              </div>
+              {topCategorias.length > 0 ? (
+                <div style={{ height: "320px" }}>
+                  <Doughnut data={despesasChartData} options={doughnutOptions} />
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <p>Nenhuma despesa registrada.</p>
+                </div>
+              )}
+            </section>
+          </div>
+
+          {/* Tabela de vales */}
           <section className="content-area">
             <div className="section-header">
               <h3>💳 Detalhamento dos Vales Não Pagos</h3>
