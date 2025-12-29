@@ -88,6 +88,15 @@ function Layout() {
             </button>
           </li>
 
+          <li>
+            <button 
+              className={`menu-btn ${isActive("/acertos") ? "active" : ""}`} 
+              onClick={() => handleMenuClick("ACERTOS", "/acertos")}
+            >
+              ACERTOS
+            </button>
+          </li>
+
           <hr className="divider" />
 
           <li>

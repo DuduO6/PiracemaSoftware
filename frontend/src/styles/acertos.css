@@ -1,0 +1,212 @@
+.acertos-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.acertos-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgb(0, 0, 0);
+  margin-top: 20px;
+}
+
+.acertos-table thead {
+  background-color: #2c3e50;
+  color: rgb(255, 255, 255);
+}
+
+.acertos-table th,
+.acertos-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #000000;
+}
+
+.acertos-table tbody tr:hover {
+  background-color: #2d2d2d;
+}
+
+.btn-visualizar {
+  background-color: #3498db;
+  color: rgb(255, 255, 255);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+  transition: background-color 0.3s;
+}
+
+.btn-visualizar:hover {
+  background-color: #2980b9;
+}
+
+/* Modal de Detalhes */
+.modal-acerto-detalhes {
+  background: rgb(31, 31, 31);
+  border-radius: 8px;
+  padding: 30px;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #ffffff;
+}
+
+.modal-header h2 {
+  color: #ffffff;
+  margin: 0;
+}
+
+.btn-fechar {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #ffffff;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s;
+}
+
+.btn-fechar:hover {
+  color: #e74c3c;
+}
+
+.acerto-info-box {
+  background-color: #ffffff;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 25px;
+}
+
+.info-row {
+  padding: 8px 0;
+  font-size: 14px;
+  color: #000000;
+}
+
+.info-row strong {
+  color: #000000;
+  margin-right: 8px;
+}
+
+.acerto-section {
+  margin-bottom: 30px;
+}
+
+.acerto-section h3 {
+  color: #ffffff;
+  margin-bottom: 15px;
+  font-size: 18px;
+  border-bottom: 2px solid #ffffff;
+  padding-bottom: 8px;
+}
+
+.table-wrapper-modal {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.tabela-modal {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tabela-modal thead {
+  background-color: #000000;
+  color: rgb(255, 255, 255);
+}
+
+.tabela-modal th,
+.tabela-modal td {
+  padding: 10px;
+  text-align: left;
+  border: 1px solid #ffffff;
+}
+
+.tabela-modal tbody tr:nth-child(even) {
+  background-color: #191919;
+}
+
+.tabela-modal tbody tr:hover {
+  background-color: #434343;
+}
+
+.acerto-resumo {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 6px;
+  margin-top: 20px;
+}
+
+.resumo-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #000000;
+  font-size: 15px;
+}
+
+.resumo-item:last-child {
+  border-bottom: none;
+}
+
+.resumo-item.destaque {
+  background-color: #2e2e2e;
+  color: rgb(71, 71, 71);
+  padding: 15px;
+  margin-top: 10px;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.resumo-item span {
+  color: #555;
+}
+
+.resumo-item.destaque span {
+  color: #ecf0f1;
+}
+
+.resumo-item strong {
+  color: #2c3e50;
+  font-weight: bold;
+}
+
+.resumo-item.destaque strong {
+  color: white;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .modal-acerto-detalhes {
+    padding: 20px;
+    max-width: 95%;
+  }
+
+  .tabela-modal {
+    font-size: 11px;
+  }
+
+  .tabela-modal th,
+  .tabela-modal td {
+    padding: 6px;
+  }
+}

@@ -15,6 +15,9 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Image
 from django.contrib.staticfiles import finders
 
+# Importar os modelos de acerto
+from acertos.models import Acerto, ItemAcerto, ValeAcerto
+
 
 class ViagemViewSet(viewsets.ModelViewSet):
     serializer_class = ViagemSerializer
@@ -34,6 +37,7 @@ class ViagemViewSet(viewsets.ModelViewSet):
         motorista_id = request.query_params.get('motorista_id')
         inicio = request.query_params.get('inicio')
         fim = request.query_params.get('fim')
+        salvar = request.query_params.get('salvar', 'false').lower() == 'true'
 
         inicio_date = datetime.strptime(inicio, "%Y-%m-%d").date()
         fim_date = datetime.strptime(fim, "%Y-%m-%d").date()
@@ -44,7 +48,7 @@ class ViagemViewSet(viewsets.ModelViewSet):
             motorista_id=motorista_id,
             data__gte=inicio_date,
             data__lte=fim_date
-        )
+        ).order_by('data')
 
         vales = Vale.objects.filter(
             motorista_id=motorista_id,
@@ -55,30 +59,67 @@ class ViagemViewSet(viewsets.ModelViewSet):
         total_vales = sum(v.valor for v in vales)
         comissao = total_valor * Decimal("0.13")
         total_viagens = viagens.count()
+        valor_a_receber = comissao - total_vales
 
+        # SALVAR HISTÓRICO DE ACERTO
+        if salvar:
+            acerto = Acerto.objects.create(
+                usuario=request.user,
+                motorista=motorista,
+                data_inicio=inicio_date,
+                data_fim=fim_date,
+                total_viagens=total_viagens,
+                valor_total_viagens=total_valor,
+                total_vales=total_vales,
+                comissao=comissao,
+                valor_a_receber=valor_a_receber
+            )
+
+            # Salvar itens (viagens)
+            for v in viagens:
+                ItemAcerto.objects.create(
+                    acerto=acerto,
+                    viagem=v,
+                    data=v.data,
+                    origem=v.origem,
+                    destino=v.destino,
+                    cliente=v.cliente,
+                    peso=v.peso,
+                    valor_tonelada=v.valor_tonelada,
+                    valor_total=v.valor_total,
+                    pago=v.pago
+                )
+
+            # Salvar vales
+            for vale in vales:
+                ValeAcerto.objects.create(
+                    acerto=acerto,
+                    vale=vale,
+                    data=vale.data,
+                    valor=vale.valor
+                )
+
+        # GERAR PDF
         buffer = BytesIO()
         doc = SimpleDocTemplate(
             buffer, 
             pagesize=A4,
             leftMargin=40, 
             rightMargin=40, 
-            topMargin=40,  # Mantém a margem normal
+            topMargin=40,
             bottomMargin=40
         )
         
         styles = getSampleStyleSheet()
         elementos = []
 
-        # Procura logo no staticfiles
         logo_path = finders.find("viagens/logo.png")
         img_w = 140
         img_h = 70
 
-        # Função que desenha a logo no canto superior direito em todas as páginas
         def draw_header(canvas_obj, doc_obj):
             if logo_path:
                 page_w, page_h = A4
-                # Posiciona no canto superior direito
                 x = page_w - doc_obj.rightMargin - img_w
                 y = page_h - img_h - 10
                 try:
@@ -91,16 +132,13 @@ class ViagemViewSet(viewsets.ModelViewSet):
                         mask='auto'
                     )
                 except Exception as e:
-                    # Em caso de erro, apenas ignora
                     pass
             
-            # Opcional: Adicionar número da página
             canvas_obj.setFont("Helvetica", 9)
             page_num = canvas_obj.getPageNumber()
             text = f"Página {page_num}"
             canvas_obj.drawRightString(page_w - doc_obj.rightMargin, 20, text)
 
-        # CABEÇALHO
         titulo = Paragraph(
             f"<b>ACERTO DE FRETES</b><br/><b>Motorista:</b> {motorista.nome}",
             styles["Title"]
@@ -116,7 +154,6 @@ class ViagemViewSet(viewsets.ModelViewSet):
         elementos.append(info)
         elementos.append(Spacer(1, 20))
 
-        # TABELA DE VIAGENS
         tabela_dados = [
             ["DATA", "ORIGEM", "DESTINO", "CLIENTE", "PESO(TN)", "VALOR P/TN", "VALOR", "PAGO"]
         ]
@@ -133,7 +170,6 @@ class ViagemViewSet(viewsets.ModelViewSet):
                 "SIM" if v.pago else "NÃO"
             ])
 
-        # Define larguras das colunas para melhor ajuste
         col_widths = [2.2*cm, 3*cm, 3*cm, 3.5*cm, 2*cm, 2.2*cm, 2.2*cm, 1.5*cm]
         
         tabela = Table(tabela_dados, colWidths=col_widths, repeatRows=1)
@@ -152,7 +188,6 @@ class ViagemViewSet(viewsets.ModelViewSet):
         elementos.append(tabela)
         elementos.append(Spacer(1, 20))
 
-        # VALES NÃO PAGOS
         elementos.append(Paragraph("<b>Vales não pagos</b>", styles["Heading2"]))
 
         if vales.exists():
@@ -179,18 +214,20 @@ class ViagemViewSet(viewsets.ModelViewSet):
 
         elementos.append(Spacer(1, 20))
 
-        # RESUMO FINAL
         resumo = Paragraph(
             f"<b>VALOR TOTAL DAS VIAGENS:</b> R$ {total_valor}<br/>"
             f"<b>TOTAL DE VALES:</b> R$ {total_vales}<br/>"
             f"<b>COMISSÃO (13%):</b> R$ {comissao}"
-            f"<br/><b>VALOR A RECEBER:</b> R$ {comissao - total_vales}",
+            f"<br/><b>VALOR A RECEBER:</b> R$ {valor_a_receber}",
             styles["Heading3"]
         )
         elementos.append(resumo)
 
-        # IMPORTANTE: Passa a função draw_header para onFirstPage e onLaterPages
         doc.build(elementos, onFirstPage=draw_header, onLaterPages=draw_header)
-        
+
         buffer.seek(0)
-        return HttpResponse(buffer, content_type="application/pdf")
+        response = HttpResponse(buffer, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            f'inline; filename="acerto_fretes_{motorista.nome}_{inicio}_{fim}.pdf"'
+        )
+        return response

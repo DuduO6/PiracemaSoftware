@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Register from "./components/Register.jsx";
 import Login from "./components/Login.jsx";
 import Home from "./components/Home.jsx";
@@ -11,17 +11,19 @@ import NovoMotorista from "./components/NovoMotorista.jsx";
 import MotoristaDetalhes from "./components/MotoristaDetalhes.jsx";
 import Viagens from "./components/Viagens.jsx";
 import Despesas from "./components/Despesas.jsx";
+import Acertos from "./components/Acertos.jsx";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
 
-        {/* Sem sidebar */}
+        {/* Rotas sem sidebar */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Com sidebar */}
+        {/* Rotas com sidebar */}
         <Route element={<Layout />}>
           <Route path="/home" element={<Home />} />
           <Route path="/caminhoes" element={<Caminhoes />} />
@@ -32,7 +34,7 @@ function App() {
           <Route path="/motoristas/:id" element={<MotoristaDetalhes />} />
           <Route path="/viagens" element={<Viagens />} />
           <Route path="/despesas" element={<Despesas />} />
-
+          <Route path="/acertos" element={<Acertos />} />
         </Route>
 
       </Routes>

@@ -36,7 +36,8 @@ const Viagens = () => {
   const [acertoData, setAcertoData] = useState({
     motorista: "",
     inicio: "",
-    fim: ""
+    fim: "",
+    salvar: false
   });
 
   // Carregar motoristas
@@ -66,9 +67,14 @@ const Viagens = () => {
   }, []);
 
   // Geração de acerto (PDF)
-  const gerarAcerto = (motoristaId, inicio, fim) => {
+  const gerarAcerto = (motoristaId, inicio, fim, salvar = false) => {
     api.get("/api/viagens/gerar_acerto/", {
-      params: { motorista_id: motoristaId, inicio, fim },
+      params: { 
+        motorista_id: motoristaId, 
+        inicio, 
+        fim,
+        salvar: salvar ? 'true' : 'false'
+      },
       responseType: "blob",
     })
       .then((res) => {
@@ -77,9 +83,20 @@ const Viagens = () => {
         link.href = window.URL.createObjectURL(blob);
         link.download = `Acerto_${motoristaId}.pdf`;
         link.click();
+        
+        if (salvar) {
+          alert("Acerto salvo no histórico com sucesso!");
+        }
       })
       .catch((err) => console.error("Erro ao gerar PDF:", err));
   };
+
+  const formatarDataBR = (dataISO) => {
+    if (!dataISO) return "";
+    const data = new Date(dataISO + "T00:00:00"); // evita bug de timezone
+    return data.toLocaleDateString("pt-BR");
+  };
+
 
   // Handlers do modal
   const handleViagemInputChange = (e) => {
@@ -168,7 +185,7 @@ const Viagens = () => {
     });
   };
 
-  // Aplicar filtros - agora filtra de verdade
+  // Aplicar filtros
   const aplicarFiltro = () => {
     setShowFiltro(false);
   };
@@ -185,17 +202,22 @@ const Viagens = () => {
   };
 
   // Filtrar viagens em tempo real
-  const viagensFiltradas = viagens.filter(v => {
+  const viagensFiltradas = viagens
+  .filter(v => {
     if (filtro.motorista && v.motorista != filtro.motorista) return false;
     if (filtro.cliente && !v.cliente.toLowerCase().includes(filtro.cliente.toLowerCase())) return false;
-    if (filtro.localidade && 
-        !v.origem.toLowerCase().includes(filtro.localidade.toLowerCase()) &&
-        !v.destino.toLowerCase().includes(filtro.localidade.toLowerCase())) return false;
+    if (
+      filtro.localidade &&
+      !v.origem.toLowerCase().includes(filtro.localidade.toLowerCase()) &&
+      !v.destino.toLowerCase().includes(filtro.localidade.toLowerCase())
+    ) return false;
     if (filtro.pago === "nao_pago" && v.pago === true) return false;
     if (filtro.inicio && new Date(v.data) < new Date(filtro.inicio)) return false;
     if (filtro.fim && new Date(v.data) > new Date(filtro.fim)) return false;
     return true;
-  });
+  })
+  .sort((a, b) => new Date(b.data) - new Date(a.data)); // 🔥 MAIS RECENTE PRIMEIRO
+
 
   const valorTotalFiltrado = viagensFiltradas.reduce((acc, v) => acc + Number(v.valor_total || 0), 0);
   const temFiltroAtivo = filtro.motorista || filtro.cliente || filtro.localidade || filtro.pago || filtro.inicio || filtro.fim;
@@ -256,7 +278,7 @@ const Viagens = () => {
           <tbody>
             {viagensFiltradas.map(v => (
               <tr key={v.id}>
-                <td>{v.data}</td>
+                <td>{formatarDataBR(v.data)}</td>
                 <td>{v.origem}</td>
                 <td>{v.destino}</td>
                 <td>{v.cliente}</td>
@@ -493,6 +515,16 @@ const Viagens = () => {
               </div>
             </div>
 
+            <div className="form-group-checkbox">
+              <input
+                type="checkbox"
+                id="salvar-acerto"
+                checked={acertoData.salvar}
+                onChange={e => setAcertoData({ ...acertoData, salvar: e.target.checked })}
+              />
+              <label htmlFor="salvar-acerto">Salvar no histórico de acertos</label>
+            </div>
+
             <div className="modal-buttons">
               <button
                 className="btn-salvar"
@@ -501,8 +533,9 @@ const Viagens = () => {
                     alert("Selecione motorista e período!");
                     return;
                   }
-                  gerarAcerto(acertoData.motorista, acertoData.inicio, acertoData.fim);
+                  gerarAcerto(acertoData.motorista, acertoData.inicio, acertoData.fim, acertoData.salvar);
                   setShowAcertoModal(false);
+                  setAcertoData({ motorista: "", inicio: "", fim: "", salvar: false });
                 }}
               >
                 GERAR PDF
