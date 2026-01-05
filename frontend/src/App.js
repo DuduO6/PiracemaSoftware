@@ -12,19 +12,19 @@ import MotoristaDetalhes from "./components/MotoristaDetalhes.jsx";
 import Viagens from "./components/Viagens.jsx";
 import Despesas from "./components/Despesas.jsx";
 import Acertos from "./components/Acertos.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-
-        {/* Rotas sem sidebar */}
+        {/* Rotas públicas */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        {/* Rotas com sidebar */}
-        <Route element={<Layout />}>
+        {/* Rotas protegidas com sidebar */}
+        <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route path="/home" element={<Home />} />
           <Route path="/caminhoes" element={<Caminhoes />} />
           <Route path="/caminhoes/novo" element={<NovoCaminhao />} />
@@ -36,7 +36,6 @@ function App() {
           <Route path="/despesas" element={<Despesas />} />
           <Route path="/acertos" element={<Acertos />} />
         </Route>
-
       </Routes>
     </BrowserRouter>
   );

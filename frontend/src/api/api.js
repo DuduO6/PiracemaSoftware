@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8000", // URL do seu backend
+  baseURL: "http://127.0.0.1:8000",
 });
 
 // Interceptor para enviar token JWT
@@ -12,7 +12,7 @@ api.interceptors.request.use(config => {
   if (
     token &&
     !config.url.includes("/auth/register/") &&
-    !config.url.includes("/auth/login/")
+    !config.url.includes("/auth/token/")
   ) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -29,16 +29,48 @@ api.interceptors.request.use(config => {
   return Promise.reject(error);
 });
 
-// Interceptor para tratar respostas de erro
+// Interceptor para tratar respostas de erro com refresh token
 api.interceptors.response.use(
   response => response,
-  error => {
-    // Exemplo: se token expirar, limpar localStorage e redirecionar
-    if (error.response && error.response.status === 401) {
+  async error => {
+    const originalRequest = error.config;
+
+    // Se receber 401 e não for tentativa de refresh
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refresh = localStorage.getItem("refresh");
+        
+        if (refresh) {
+          const response = await axios.post("http://127.0.0.1:8000/auth/token/refresh/", {
+            refresh: refresh
+          });
+
+          const newAccessToken = response.data.access;
+          localStorage.setItem("access", newAccessToken);
+
+          // Atualizar o token na requisição original
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        // Se refresh falhar, limpar tudo e redirecionar
+        localStorage.removeItem("access");
+        localStorage.removeItem("refresh");
+        window.location.href = "/login";
+        return Promise.reject(refreshError);
+      }
+    }
+
+    // Se não conseguir renovar ou outro erro
+    if (error.response?.status === 401) {
       localStorage.removeItem("access");
       localStorage.removeItem("refresh");
-      // Aqui você pode redirecionar para login se quiser
+      window.location.href = "/login";
     }
+
     return Promise.reject(error);
   }
 );

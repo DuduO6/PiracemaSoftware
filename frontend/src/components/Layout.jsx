@@ -1,7 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
+import { logout } from '../services/auth';
+
 import "../styles/layout.css";
 import logo from "../assets/logo.svg";
+
 
 function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -14,6 +17,11 @@ function Layout() {
   const handleMenuClick = (item, path) => {
     navigate(path);
     if (window.innerWidth <= 768) closeSidebar();
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   const isActive = (path) => location.pathname === path;
@@ -105,6 +113,15 @@ function Layout() {
               onClick={() => handleMenuClick("SUPORTE", "/suporte")}
             >
               SUPORTE
+            </button>
+          </li>
+
+          <li>
+            <button 
+              className="menu-btn logout-btn" 
+              onClick={handleLogout}
+            >
+              SAIR
             </button>
           </li>
         </ul>

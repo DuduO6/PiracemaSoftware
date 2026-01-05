@@ -211,6 +211,28 @@
   }
 }
 
+.logout-btn {
+  margin-top: auto; /* Empurra o botão para o final da sidebar */
+  background-color: #dc3545 !important; /* Vermelho */
+  color: white !important;
+}
+
+.logout-btn:hover {
+  background-color: #c82333 !important;
+  opacity: 0.9;
+}
+
+/* Se quiser que o botão fique sempre no final */
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.menu-list > li:last-child {
+  margin-top: auto;
+}
+
 /* responsividade */
 @media (max-width: 768px) {
   .sidebar {
