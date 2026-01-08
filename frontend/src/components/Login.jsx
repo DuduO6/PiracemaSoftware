@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from "react-router-dom";
-import api from '../api'; // ← ADICIONE ESTA LINHA
+import api from "../api/api";
 import '../styles/auth.css';
 import logo from '../assets/logo.svg';
 
