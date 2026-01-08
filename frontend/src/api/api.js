@@ -1,7 +1,10 @@
 import axios from "axios";
 
+// Usa variável de ambiente ou fallback para desenvolvimento local
+const API_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
+
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8000",
+  baseURL: API_URL,
 });
 
 // Interceptor para enviar token JWT
@@ -43,7 +46,7 @@ api.interceptors.response.use(
         const refresh = localStorage.getItem("refresh");
         
         if (refresh) {
-          const response = await axios.post("http://127.0.0.1:8000/auth/token/refresh/", {
+          const response = await axios.post(`${API_URL}/auth/token/refresh/`, {
             refresh: refresh
           });
 
