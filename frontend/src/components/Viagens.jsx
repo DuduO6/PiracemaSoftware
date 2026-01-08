@@ -67,29 +67,41 @@ const Viagens = () => {
   }, []);
 
   // Geração de acerto (PDF)
-  const gerarAcerto = (motoristaId, inicio, fim, salvar = false) => {
-    api.get("/api/viagens/gerar_acerto/", {
-      params: { 
-        motorista_id: motoristaId, 
-        inicio, 
-        fim,
-        salvar: salvar ? 'true' : 'false'
-      },
-      responseType: "blob",
-    })
-      .then((res) => {
-        const blob = new Blob([res.data], { type: "application/pdf" });
-        const link = document.createElement("a");
-        link.href = window.URL.createObjectURL(blob);
-        link.download = `Acerto_${motoristaId}.pdf`;
-        link.click();
-        
-        if (salvar) {
-          alert("Acerto salvo no histórico com sucesso!");
-        }
-      })
-      .catch((err) => console.error("Erro ao gerar PDF:", err));
+  const gerarAcerto = async (motoristaId, inicio, fim, salvar = false) => {
+    try {
+      const res = await api.get("/api/viagens/gerar_acerto/", {
+        params: { 
+          motorista_id: motoristaId, 
+          inicio, 
+          fim,
+          salvar: salvar ? "true" : "false"
+        },
+        responseType: "blob",
+      });
+
+      const blob = new Blob([res.data], { type: "application/pdf" });
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Acerto_${motoristaId}.pdf`;
+
+      // 🔥 ESSENCIAL PARA O ELECTRON
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      window.URL.revokeObjectURL(url);
+
+      if (salvar) {
+        alert("Acerto salvo no histórico com sucesso!");
+      }
+    } catch (err) {
+      console.error("Erro ao gerar PDF:", err);
+      alert("Erro ao gerar o PDF");
+    }
   };
+
 
   const formatarDataBR = (dataISO) => {
     if (!dataISO) return "";

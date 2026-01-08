@@ -228,6 +228,6 @@ class ViagemViewSet(viewsets.ModelViewSet):
         buffer.seek(0)
         response = HttpResponse(buffer, content_type="application/pdf")
         response["Content-Disposition"] = (
-            f'inline; filename="acerto_fretes_{motorista.nome}_{inicio}_{fim}.pdf"'
+            f'attachment; filename="acerto_fretes_{motorista.nome}_{inicio}_{fim}.pdf"'
         )
         return response

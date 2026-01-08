@@ -1,5 +1,9 @@
 # Ambiente
 .env
 bdlocal.txt
-
+build_django.spec
+dist
+electron
+venv
+.env.production
 

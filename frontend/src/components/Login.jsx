@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from "react-router-dom";
 import '../styles/auth.css';
 import logo from '../assets/logo.svg';
 
@@ -9,6 +10,8 @@ function Login() {
   });
 
   const [errors, setErrors] = useState({});
+  const navigate = useNavigate();
+
 
   const validateForm = () => {
     const newErrors = {};
@@ -47,7 +50,7 @@ function Login() {
         localStorage.setItem("access", data.access);
         localStorage.setItem("refresh", data.refresh);
 
-        window.location.href = '/home';
+      navigate("/home", { replace: true });
       } else {
         alert(data.error || 'Credenciais inválidas');
       }
@@ -112,7 +115,7 @@ function Login() {
 
         <div className="register-link">
           <p>NÃO POSSUI UMA CONTA?</p>
-          <a href="/register">REGISTRE-SE</a>
+          <Link to="/register">REGISTRE-SE</Link>
         </div>
       </form>
     </div>
