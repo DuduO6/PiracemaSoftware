@@ -109,15 +109,6 @@ function Layout() {
 
           <li>
             <button 
-              className={`menu-btn ${isActive("/suporte") ? "active" : ""}`} 
-              onClick={() => handleMenuClick("SUPORTE", "/suporte")}
-            >
-              SUPORTE
-            </button>
-          </li>
-
-          <li>
-            <button 
               className="menu-btn logout-btn" 
               onClick={handleLogout}
             >
