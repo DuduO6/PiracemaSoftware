@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from "react-router-dom";
+import api from '../api'; // ← ADICIONE ESTA LINHA
 import '../styles/auth.css';
 import logo from '../assets/logo.svg';
 
@@ -11,7 +12,6 @@ function Login() {
 
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
-
 
   const validateForm = () => {
     const newErrors = {};
@@ -34,29 +34,27 @@ function Login() {
     if (!validateForm()) return;
 
     try {
-      const response = await fetch('http://localhost:8000/auth/login/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: formData.username,
-          password: formData.password
-        })
+      // ← SUBSTITUA O FETCH POR API
+      const response = await api.post('/auth/login/', {
+        username: formData.username,
+        password: formData.password
       });
 
-      const data = await response.json();
+      const data = response.data;
 
-      if (response.ok) {
-        // Salva tokens vindos do backend Django
-        localStorage.setItem("access", data.access);
-        localStorage.setItem("refresh", data.refresh);
+      // Salva tokens vindos do backend Django
+      localStorage.setItem("access", data.access);
+      localStorage.setItem("refresh", data.refresh);
 
       navigate("/home", { replace: true });
-      } else {
-        alert(data.error || 'Credenciais inválidas');
-      }
+      
     } catch (error) {
       console.error('Erro:', error);
-      alert('Erro ao conectar com o servidor');
+      if (error.response?.data?.error) {
+        alert(error.response.data.error);
+      } else {
+        alert('Erro ao conectar com o servidor');
+      }
     }
   };
 
@@ -78,7 +76,6 @@ function Login() {
 
   return (
     <div className="auth-container">
-
       <div className="logo-section">
         <div className="logo-wrapper">
           <img src={logo} alt="Piracema Logo" className="logo-monitor" />
@@ -86,7 +83,6 @@ function Login() {
       </div>
 
       <form onSubmit={handleSubmit} className="auth-form">
-        
         <div className="form-group">
           <label>Nome/E-mail:</label>
           <input
