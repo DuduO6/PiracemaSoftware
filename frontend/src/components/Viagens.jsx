@@ -119,6 +119,16 @@ const Viagens = () => {
     }));
   };
 
+  const handleRemoverViagem = (id) => {
+    if (!window.confirm("Tem certeza que deseja remover esta viagem?")) return;
+
+    api.delete(`/api/viagens/${id}/`)
+      .then(() => {
+        setViagens((prev) => prev.filter(v => v.id !== id));
+      })
+      .catch((err) => console.error("Erro ao remover viagem:", err));
+  }
+
   const handleAdicionarViagem = () => {
     if (!viagemData.motorista || !viagemData.origem || !viagemData.destino || !viagemData.cliente || !viagemData.peso || !viagemData.valor_tonelada || !viagemData.data) {
       alert("Preencha todos os campos obrigatórios!");
@@ -304,10 +314,23 @@ const Viagens = () => {
                 </td>
                 <td>{motoristas.find(m => m.id === v.motorista)?.nome || "—"}</td>
                 <td>
-                  <button className="btn-editar" onClick={() => handleEditarViagem(v)}>
-                    EDITAR
-                  </button>
+                  <div className="acoes-row">
+                    <button
+                      className="btn-remover"
+                      onClick={() => handleRemoverViagem(v.id)}
+                    >
+                      REMOVER
+                    </button>
+
+                    <button
+                      className="btn-editar"
+                      onClick={() => handleEditarViagem(v)}
+                    >
+                      EDITAR
+                    </button>
+                  </div>
                 </td>
+
               </tr>
             ))}
           </tbody>

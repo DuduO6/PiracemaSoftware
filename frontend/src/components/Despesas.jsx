@@ -25,6 +25,7 @@ const Despesas = () => {
   const [filtro, setFiltro] = useState({
     categoria: "",
     caminhao: "",
+    motorista: "",
     status: "",
     tipo: "",
     ano: new Date().getFullYear(),
@@ -40,8 +41,9 @@ const Despesas = () => {
     carregarCaminhoes();
     carregarMotoristas();
     carregarDespesas();
-  }, [filtro.ano, filtro.mes, filtro.caminhao]);
+  }, [filtro.ano, filtro.mes, filtro.caminhao, filtro.motorista, filtro.categoria, filtro.status, filtro.tipo]);
 
+  
   const carregarCategorias = async () => {
     try {
       const res = await api.get("/api/despesas/categorias/");
@@ -61,12 +63,12 @@ const Despesas = () => {
   };
 
   const carregarMotoristas = async () => {
-    try {
-      const res = await api.get("/api/despesas/motoristas/");
-      setMotoristas(res.data);
-    } catch (err) {
-      console.error("Erro ao carregar motoristas:", err);
-    }
+    api.get("/api/motoristas/")
+      .then((res) => {
+        const data = Array.isArray(res.data) ? res.data : res.data.results || Object.values(res.data);
+        setMotoristas(data);
+      })
+      .catch((err) => console.error("Erro ao carregar motoristas:", err));
   };
 
   const carregarDespesas = async () => {
@@ -77,6 +79,7 @@ const Despesas = () => {
       };
 
       if (filtro.caminhao) params.caminhao = filtro.caminhao;
+      if (filtro.motorista) params.motorista = filtro.motorista; // ✅ ADICIONAR
       if (filtro.status) params.status = filtro.status;
       if (filtro.categoria) params.categoria = filtro.categoria;
       if (filtro.tipo) params.tipo = filtro.tipo;
@@ -88,6 +91,7 @@ const Despesas = () => {
     }
   };
 
+
   /* ==========================
      HELPERS
   =========================== */
@@ -98,6 +102,7 @@ const Despesas = () => {
   const getNomeCategoria = c => c?.nome || "—";
   const getCorCategoria = c => c?.cor || "#9e9e9e";
   const getNomeCaminhao = c => c?.nome_conjunto || "—";
+  const getNomeMotorista = m => m?.nome || "—";
 
   const getTipoClass = t => {
     if (t === "OPERACIONAL") return "tipo-fixa";
@@ -123,10 +128,8 @@ const Despesas = () => {
 
     if (!cat?.nome) return false;
 
-    return cat.nome
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toUpperCase() === "SALARIO";
+    // Comparação direta, sem normalização desnecessária
+    return cat.nome === "SALARIO" || cat.nome === "COMISSAO";
   };
 
   const categoriaRequerCaminhao = () => {
@@ -265,6 +268,19 @@ const Despesas = () => {
     setShowModalDespesa(true);
   };
 
+  const getCaminhaoOuMotorista = (despesa) => {
+    if (despesa.motorista) {
+      return getNomeMotorista(despesa.motorista);
+    }
+
+    if (despesa.caminhao) {
+      return getNomeCaminhao(despesa.caminhao);
+    }
+
+    return "—";
+  };
+
+
   const salvarDespesa = async () => {
     // Validações básicas
     if (!despesaData.categoria_id || !despesaData.descricao || !despesaData.valor) {
@@ -277,9 +293,9 @@ const Despesas = () => {
       return;
     }
 
-    // Validação: SALÁRIO requer motorista
+    // Validação: SALÁRIO/COMISSÃO requer motorista
     if (categoriaEhSalario() && !despesaData.motorista_id) {
-      alert("Selecione um motorista para o salário");
+      alert("Selecione um motorista para salário/comissão");
       return;
     }
 
@@ -294,24 +310,19 @@ const Despesas = () => {
         categoria_id: Number(despesaData.categoria_id),
         descricao: despesaData.descricao,
         observacoes: despesaData.observacoes || "",
-        valor: despesaData.valor,
+        valor: Number(despesaData.valor),
         tipo: despesaData.tipo,
         competencia: despesaData.competencia,
       };
 
-      // Adiciona caminhão (obrigatório para não-salário)
-      if (categoriaRequerCaminhao()) {
+      // Adiciona caminhão apenas se não for salário/comissão
+      if (categoriaRequerCaminhao() && despesaData.caminhao_id) {
         payload.caminhao_id = Number(despesaData.caminhao_id);
       }
 
-      // Adiciona motorista (obrigatório para salário)
-      if (categoriaEhSalario()) {
+      // Adiciona motorista se for salário/comissão
+      if (categoriaEhSalario() && despesaData.motorista_id) {
         payload.motorista_id = Number(despesaData.motorista_id);
-        // Para salário, pega o caminhão do motorista
-        const motorista = motoristas.find(m => m.id === Number(despesaData.motorista_id));
-        if (motorista?.caminhao?.id) {
-          payload.caminhao_id = motorista.caminhao.id;
-        }
       }
 
       // Adiciona data de vencimento se preenchida
@@ -319,14 +330,30 @@ const Despesas = () => {
         payload.data_vencimento = despesaData.data_vencimento;
       }
 
+      console.log("📤 Payload enviado:", payload);
+
       await api.post("/api/despesas/despesas/", payload);
 
       alert("✅ Despesa criada com sucesso!");
       setShowModalDespesa(false);
       carregarDespesas();
     } catch (err) {
-      console.error(err.response?.data);
-      alert("Erro ao salvar despesa: " + (err.response?.data?.detail || "Erro desconhecido"));
+      console.error("❌ Erro completo:", err);
+      console.error("📥 Resposta do servidor:", err.response?.data);
+      
+      // Tenta extrair mensagem de erro mais específica
+      let errorMsg = "Erro desconhecido";
+      if (err.response?.data) {
+        if (typeof err.response.data === 'string') {
+          errorMsg = err.response.data;
+        } else if (err.response.data.detail) {
+          errorMsg = err.response.data.detail;
+        } else {
+          errorMsg = JSON.stringify(err.response.data);
+        }
+      }
+      
+      alert("Erro ao salvar despesa: " + errorMsg);
     }
   };
 
@@ -435,6 +462,23 @@ const Despesas = () => {
           </div>
 
           <div className="filtro-item">
+            <label className="filtro-label">Motorista</label>
+            <select
+              className="filtro-select"
+              value={filtro.motorista}
+              onChange={e => handleFiltroChange("motorista", e.target.value)}
+            >
+              <option value="">Todos</option>
+              {motoristas.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+
+
+          <div className="filtro-item">
             <label className="filtro-label">Status</label>
             <select
               className="filtro-select"
@@ -494,7 +538,7 @@ const Despesas = () => {
             <tr>
               <th>COMPETÊNCIA</th>
               <th>CATEGORIA</th>
-              <th>CAMINHÃO</th>
+              <th>CAMINHÃO/MOTORISTA</th>
               <th>DESCRIÇÃO</th>
               <th>VALOR</th>
               <th>TIPO</th>
@@ -527,7 +571,7 @@ const Despesas = () => {
                       {getNomeCategoria(d.categoria)}
                     </span>
                   </td>
-                  <td>{getNomeCaminhao(d.caminhao)}</td>
+                  <td>{getCaminhaoOuMotorista(d)}</td>
                   <td>{d.descricao}</td>
                   <td>R$ {parseFloat(d.valor || 0).toFixed(2)}</td>
                   <td>
@@ -550,12 +594,12 @@ const Despesas = () => {
                           PAGAR
                         </button>
                       ) : (
-                        <button className="btn-pendente" onClick={() => marcarPendente(d)}>
+                        <button className="btn-editar" onClick={() => marcarPendente(d)}>
                           DESFAZER
                         </button>
                       )}
-                      <button className="btn-excluir" onClick={() => excluirDespesa(d)}>
-                        🗑️
+                      <button className="btn-remover" onClick={() => excluirDespesa(d)}>
+                        APAGAR
                       </button>
                     </div>
                   </td>
@@ -588,7 +632,7 @@ const Despesas = () => {
               </select>
             </div>
 
-            {/* CAMPO CONDICIONAL: MOTORISTA (apenas para SALÁRIO) */}
+            {/* CAMPO CONDICIONAL: MOTORISTA (apenas para SALÁRIO/COMISSÃO) */}
             {categoriaEhSalario() && (
               <div className="form-group">
                 <label className="form-label">Motorista *</label>
@@ -601,14 +645,14 @@ const Despesas = () => {
                   <option value="">Selecione o motorista</option>
                   {motoristas.map(m => (
                     <option key={m.id} value={m.id}>
-                      {m.nome} - {m.caminhao?.nome_conjunto || "Sem caminhão"}
+                      {m.nome}
                     </option>
                   ))}
                 </select>
               </div>
             )}
 
-            {/* CAMPO CONDICIONAL: CAMINHÃO (não aparece para SALÁRIO) */}
+            {/* CAMPO CONDICIONAL: CAMINHÃO (não aparece para SALÁRIO/COMISSÃO) */}
             {categoriaRequerCaminhao() && (
               <div className="form-group">
                 <label className="form-label">Caminhão *</label>

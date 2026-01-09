@@ -98,6 +98,10 @@ class DespesaViewSet(viewsets.ModelViewSet):
         caminhao = self.request.query_params.get('caminhao')
         if caminhao:
             qs = qs.filter(caminhao_id=caminhao)
+
+        motorista = self.request.query_params.get('motorista')  # ✅ NOVO
+        if motorista:
+            qs = qs.filter(motorista_id=motorista)
         
         categoria = self.request.query_params.get('categoria')
         if categoria:

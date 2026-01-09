@@ -74,22 +74,24 @@ class Despesa(models.Model):
         related_name='despesas'
     )
     
-    # Todo custo impacta um caminhão
+    # Caminhão (opcional para SALARIO e COMISSAO)
     caminhao = models.ForeignKey(
         Caminhao,
         on_delete=models.PROTECT,
         related_name='despesas',
-        help_text='Caminhão que recebe este custo'
+        null=True,
+        blank=True,
+        help_text='Caminhão relacionado (obrigatório exceto para salários/comissões)'
     )
     
-    # Motorista (opcional, apenas para SALARIO e COMISSAO)
+    # Motorista (obrigatório apenas para SALARIO e COMISSAO)
     motorista = models.ForeignKey(
         Motorista,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='despesas',
-        help_text='Motorista relacionado (salário/comissão)'
+        help_text='Motorista relacionado (obrigatório para salário/comissão)'
     )
     
     descricao = models.CharField(max_length=255)
@@ -103,7 +105,7 @@ class Despesa(models.Model):
         max_digits=12,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0.01'))],
-        default=Decimal('0.00'),  # apenas para registros antigos
+        default=Decimal('0.00'),
         help_text='Valor da despesa'
     )
     
@@ -136,7 +138,11 @@ class Despesa(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.descricao} - {self.caminhao.nome_conjunto} - R$ {self.valor}"
+        if self.caminhao:
+            return f"{self.descricao} - {self.caminhao.nome_conjunto} - R$ {self.valor}"
+        elif self.motorista:
+            return f"{self.descricao} - {self.motorista.nome} - R$ {self.valor}"
+        return f"{self.descricao} - R$ {self.valor}"
     
     def marcar_pago(self):
         """Marca despesa como paga."""

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "../styles/home.css";
 import api from "../api/api";
-import { Bar, Line, Doughnut } from "react-chartjs-2";
+import { Bar, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   BarElement,
@@ -9,8 +9,6 @@ import {
   LinearScale,
   Tooltip,
   Legend,
-  LineElement,
-  PointElement,
   ArcElement
 } from "chart.js";
 
@@ -19,9 +17,7 @@ ChartJS.register(
   CategoryScale, 
   LinearScale, 
   Tooltip, 
-  Legend, 
-  LineElement, 
-  PointElement,
+  Legend,
   ArcElement
 );
 
@@ -29,13 +25,32 @@ function Home() {
   const [data, setData] = useState({
     faturamento: 0,
     viagens: 0,
+    ticket_medio: 0,
     ranking_motoristas: [],
     total_vales_pendentes: 0,
     motoristas_devendo: [],
-    evolucao_diaria: []
+    evolucao_diaria: [],
+    resumo_caminhoes: [],
+    despesas: {
+      total: 0,
+      pagas: 0,
+      pendentes: 0,
+      quantidade: 0,
+      por_categoria: []
+    },
+    estatisticas: {
+      motoristas_ativos: 0,
+      total_motoristas: 0,
+      taxa_atividade: 0
+    },
+    comparacao: {
+      faturamento_anterior: 0,
+      viagens_anterior: 0,
+      variacao_faturamento: 0,
+      variacao_viagens: 0
+    }
   });
 
-  const [despesas, setDespesas] = useState([]);
   const [username, setUsername] = useState("");
   const [dias, setDias] = useState(30);
   const [dropdown, setDropdown] = useState(false);
@@ -59,91 +74,36 @@ function Home() {
       api.get("/auth/user/", {
         headers: { Authorization: `Bearer ${token}` }
       }),
-      api.get("/api/despesas/despesas/", {
-        headers: { Authorization: `Bearer ${token}` }
-      })
     ])
-      .then(([dashRes, userRes, despesasRes]) => {
+      .then(([dashRes, userRes]) => {
         setData(dashRes.data);
         setUsername(userRes.data.username);
-        setDespesas(despesasRes.data);
       })
-      .catch(err => console.error("Erro carregando dashboard", err))
+      .catch(err => {
+        console.error("Erro carregando dashboard:", err);
+        if (err.response) {
+          console.error("Response data:", err.response.data);
+          console.error("Response status:", err.response.status);
+        }
+      })
       .finally(() => setLoading(false));
   }, [dias]);
 
-  // Cálculos de despesas no período
-  const calcularDespesasPeriodo = () => {
-    const hoje = new Date();
-    const dataLimite = new Date();
-    dataLimite.setDate(hoje.getDate() - dias);
-
-    const despesasPeriodo = despesas.filter(d => {
-      const dataVencimento = new Date(d.data_vencimento);
-      return dataVencimento >= dataLimite && dataVencimento <= hoje;
-    });
-
-    const total = despesasPeriodo.reduce((acc, d) => {
-      const valor = d.tipo === "FIXA_ANUAL" 
-        ? Number(d.valor_total) / 12 
-        : Number(d.valor_total);
-      return acc + valor;
-    }, 0);
-
-    const pagas = despesasPeriodo.filter(d => d.status === "PAGO").reduce((acc, d) => {
-      const valor = d.tipo === "FIXA_ANUAL" 
-        ? Number(d.valor_total) / 12 
-        : Number(d.valor_total);
-      return acc + valor;
-    }, 0);
-
-    const pendentes = total - pagas;
-
-    return { total, pagas, pendentes, quantidade: despesasPeriodo.length };
-  };
-
-  const despesasInfo = calcularDespesasPeriodo();
-
   // Balanço geral
-  const lucroOperacional = data.faturamento - despesasInfo.pagas;
-  const saldoPendente = lucroOperacional + data.total_vales_pendentes - despesasInfo.pendentes;
+  const lucroOperacional = data.faturamento - data.despesas.pagas;
+  const saldoPendente = lucroOperacional + data.total_vales_pendentes - data.despesas.pendentes;
   const margemLucro = data.faturamento > 0 
     ? ((lucroOperacional / data.faturamento) * 100) 
     : 0;
 
-  // Despesas por categoria (top 5)
-  const despesasPorCategoria = () => {
-    const categorias = {};
-    
-    despesas.forEach(d => {
-      const categoriaNome = d.categoria?.nome || "Sem categoria";
-      const valor = d.tipo === "FIXA_ANUAL" 
-        ? Number(d.valor_total) / 12 
-        : Number(d.valor_total);
-      
-      if (!categorias[categoriaNome]) {
-        categorias[categoriaNome] = {
-          valor: 0,
-          cor: d.categoria?.cor || "#9e9e9e"
-        };
-      }
-      categorias[categoriaNome].valor += valor;
-    });
-
-    return Object.entries(categorias)
-      .sort((a, b) => b[1].valor - a[1].valor)
-      .slice(0, 5);
-  };
-
-  const topCategorias = despesasPorCategoria();
-
+  // Gráfico de ranking de motoristas
   const chartData = {
-    labels: data.ranking_motoristas.map(item => item.motorista__nome),
+    labels: data.ranking_motoristas.map(item => item.nome),
     datasets: [
       {
         label: `Viagens (${dias} dias)`,
         data: data.ranking_motoristas.map(item => item.total),
-        backgroundColor: ["#6366F1", "#8B5CF6", "#A78BFA", "#C4B5FD", "#DDD6FE"],
+        backgroundColor: ["#ffffffff", "#3e3e3eff", "#151022ff", "#C4B5FD", "#DDD6FE"],
         borderColor: "#1E1E1E",
         borderWidth: 1,
         borderRadius: 8,
@@ -152,14 +112,26 @@ function Home() {
     ]
   };
 
+  // Gerar cores para o gráfico de despesas
+  const gerarCores = (quantidade) => {
+    return Array.from({ length: quantidade }, (_, i) => {
+      const hue = Math.round((360 / quantidade) * i);
+      return `hsl(${hue}, 70%, 45%)`;
+    });
+  };
+
+  const topCategorias = data.despesas.por_categoria || [];
+  const cores = gerarCores(topCategorias.length);
+
   const despesasChartData = {
-    labels: topCategorias.map(([nome]) => nome),
+    labels: topCategorias.map(c => c.categoria),
     datasets: [
       {
-        data: topCategorias.map(([, data]) => data.valor),
-        backgroundColor: topCategorias.map(([, data]) => data.cor),
+        data: topCategorias.map(c => c.total),
+        backgroundColor: cores,
         borderColor: "#1E1E1E",
-        borderWidth: 2
+        borderWidth: 2,
+        hoverOffset: 10
       }
     ]
   };
@@ -223,8 +195,6 @@ function Home() {
       }
     }
   };
-
-  const ticketMedio = data.viagens > 0 ? data.faturamento / data.viagens : 0;
 
   return (
     <div className="dashboard">
@@ -291,7 +261,10 @@ function Home() {
               <div className="block-content">
                 <h2>Faturamento Total</h2>
                 <p className="value">R$ {data.faturamento.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-                <span className="period-label">Últimos {dias} dias</span>
+                <span className="period-label">
+                  {data.comparacao.variacao_faturamento > 0 ? '↑' : data.comparacao.variacao_faturamento < 0 ? '↓' : '='} 
+                  {Math.abs(data.comparacao.variacao_faturamento)}% vs período anterior
+                </span>
               </div>
             </div>
 
@@ -300,7 +273,10 @@ function Home() {
               <div className="block-content">
                 <h2>Total de Viagens</h2>
                 <p className="value">{data.viagens}</p>
-                <span className="period-label">Últimos {dias} dias</span>
+                <span className="period-label">
+                  {data.comparacao.variacao_viagens > 0 ? '↑' : data.comparacao.variacao_viagens < 0 ? '↓' : '='} 
+                  {Math.abs(data.comparacao.variacao_viagens)}% vs período anterior
+                </span>
               </div>
             </div>
 
@@ -308,7 +284,7 @@ function Home() {
               <div className="block-icon">📊</div>
               <div className="block-content">
                 <h2>Ticket Médio</h2>
-                <p className="value">R$ {ticketMedio.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+                <p className="value">R$ {data.ticket_medio.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
                 <span className="period-label">Por viagem</span>
               </div>
             </div>
@@ -331,8 +307,10 @@ function Home() {
               <div className="block-icon">💳</div>
               <div className="block-content">
                 <h2>Despesas Totais</h2>
-                <p className="value">R$ {despesasInfo.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-                <span className="period-label">{despesasInfo.quantidade} despesa(s)</span>
+                <p className="value">
+                  R$ {data.despesas.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </p>
+                <span className="period-label">{data.despesas.quantidade} despesa(s)</span>
               </div>
             </div>
 
@@ -340,7 +318,9 @@ function Home() {
               <div className="block-icon">✓</div>
               <div className="block-content">
                 <h2>Despesas Pagas</h2>
-                <p className="value">R$ {despesasInfo.pagas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+                <p className="value">
+                  R$ {data.despesas.pagas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </p>
                 <span className="period-label">Últimos {dias} dias</span>
               </div>
             </div>
@@ -350,9 +330,32 @@ function Home() {
               <div className="block-content">
                 <h2>Despesas Pendentes</h2>
                 <p className="value red">
-                  R$ {despesasInfo.pendentes.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  R$ {data.despesas.pendentes.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                 </p>
                 <span className="period-label">A vencer/vencidas</span>
+              </div>
+            </div>
+          </section>
+
+          {/* ESTATÍSTICAS DE MOTORISTAS */}
+          <section className="cards-row">
+            <div className="info-block info">
+              <div className="block-icon">👥</div>
+              <div className="block-content">
+                <h2>Motoristas Ativos</h2>
+                <p className="value">{data.estatisticas.motoristas_ativos}</p>
+                <span className="period-label">
+                  de {data.estatisticas.total_motoristas} cadastrados
+                </span>
+              </div>
+            </div>
+
+            <div className="info-block primary">
+              <div className="block-icon">📈</div>
+              <div className="block-content">
+                <h2>Taxa de Atividade</h2>
+                <p className="value">{data.estatisticas.taxa_atividade}%</p>
+                <span className="period-label">Últimos {dias} dias</span>
               </div>
             </div>
           </section>
@@ -379,9 +382,7 @@ function Home() {
                      <strong>Lucro Operacional</strong>
                   </td>
                   <td>
-                    R$ {Number(lucroOperacional || 0).toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}
+                    R$ {lucroOperacional.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </td>
                   <td>Faturamento - Despesas Pagas</td>
                 </tr>
@@ -391,31 +392,24 @@ function Home() {
                      <strong>Margem de Lucro</strong>
                   </td>
                   <td>
-                    {Number(margemLucro || 0).toFixed(1)}%
+                    {margemLucro.toFixed(1)}%
                   </td>
                   <td>Lucro / Faturamento × 100</td>
                 </tr>
 
-                <tr
-                  className={
-                    saldoPendente >= 0 ? "saldo-positivo" : "saldo-negativo"
-                  }
-                >
+                <tr className={saldoPendente >= 0 ? "saldo-positivo" : "saldo-negativo"}>
                   <td>
                     {saldoPendente >= 0 ? "✓" : "⚠️"}{" "}
                     <strong>Saldo Projetado</strong>
                   </td>
                   <td>
-                    R$ {Number(saldoPendente || 0).toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}
+                    R$ {saldoPendente.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                   </td>
                   <td>Lucro + Vales Pendentes - Despesas Pendentes</td>
                 </tr>
               </tbody>
             </table>
           </section>
-
 
           {/* GRÁFICOS LADO A LADO */}
           <div className="charts-grid">
@@ -487,6 +481,7 @@ function Home() {
                   <tr>
                     <th>Motorista</th>
                     <th>Total Devido</th>
+                    <th>Qtd. Vales</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -495,13 +490,14 @@ function Home() {
                     <tr key={index}>
                       <td>
                         <div className="motorista-cell">
-                          <div className="avatar-small">{item.motorista__nome.charAt(0)}</div>
-                          {item.motorista__nome}
+                          <div className="avatar-small">{item.nome.charAt(0)}</div>
+                          {item.nome}
                         </div>
                       </td>
                       <td className="valor-cell">
                         R$ {item.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </td>
+                      <td>{item.qtd_vales}</td>
                       <td>
                         <span className="status-badge pending">Pendente</span>
                       </td>
@@ -514,9 +510,9 @@ function Home() {
                 {data.motoristas_devendo.map((item, index) => (
                   <div key={index} className="vale-card">
                     <div className="vale-header">
-                      <div className="avatar-large">{item.motorista__nome.charAt(0)}</div>
+                      <div className="avatar-large">{item.nome.charAt(0)}</div>
                       <div className="vale-info">
-                        <h4>{item.motorista__nome}</h4>
+                        <h4>{item.nome}</h4>
                         <span className="status-badge pending">Pendente</span>
                       </div>
                     </div>
@@ -525,6 +521,60 @@ function Home() {
                       <span className="valor">
                         R$ {item.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </span>
+                      <span className="label">{item.qtd_vales} vale(s)</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Desempenho por Caminhão */}
+          <section className="content-area">
+            <div className="section-header">
+              <h3>🚛 Desempenho por Caminhão</h3>
+              <span className="badge">{dias} dias</span>
+            </div>
+
+            {data.resumo_caminhoes?.length === 0 ? (
+              <div className="empty-state">
+                <p>Nenhum caminhão com movimentação no período.</p>
+              </div>
+            ) : (
+              <div className="caminhoes-grid">
+                {data.resumo_caminhoes.map(c => (
+                  <div key={c.id} className="caminhao-dashboard-card">
+                    <div className="card-top">
+                      <h4>{c.modelo}</h4>
+                      <span className="placa">{c.placa}</span>
+                    </div>
+
+                    <p className="muted">
+                      Motorista: <strong>{c.motorista || "—"}</strong>
+                    </p>
+
+                    <div className="valores-grid">
+                      <div>
+                        <span>Faturamento</span>
+                        <strong className="positivo">
+                          R$ {c.faturamento_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>Custos</span>
+                        <strong className="negativo">
+                          R$ {c.custo_total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className={`resultado ${c.resultado >= 0 ? "positivo" : "negativo"}`}>
+                      Resultado: R$ {c.resultado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </div>
+
+                    <div className="footer-info">
+                      {c.total_viagens} viagem(ns)
                     </div>
                   </div>
                 ))}

@@ -19,7 +19,7 @@ class MotoristaSimpleSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Motorista
-        fields = ['id', 'nome', 'cpf', 'salario_fixo', 'caminhao']
+        fields = ['id', 'nome', 'cpf', 'caminhao']
 
 
 class CategoriaDespesaSerializer(serializers.ModelSerializer):
@@ -83,13 +83,16 @@ class DespesaSerializer(serializers.ModelSerializer):
     categoria_id = serializers.PrimaryKeyRelatedField(
         queryset=CategoriaDespesa.objects.all(),
         source='categoria',
-        write_only=True
+        write_only=True,
+        allow_null=False
     )
     
     caminhao_id = serializers.PrimaryKeyRelatedField(
         queryset=Caminhao.objects.all(),
         source='caminhao',
-        write_only=True
+        write_only=True,
+        required=False,
+        allow_null=True
     )
     
     motorista_id = serializers.PrimaryKeyRelatedField(
@@ -136,17 +139,24 @@ class DespesaSerializer(serializers.ModelSerializer):
         return obj.competencia.strftime('%m/%Y')
 
     def validate(self, attrs):
-        # Validações específicas
         categoria = attrs.get('categoria')
         motorista = attrs.get('motorista')
-        
-        # Se categoria for SALARIO ou COMISSAO, motorista é obrigatório
-        if categoria and categoria.nome in ['SALARIO', 'COMISSAO']:
-            if not motorista:
-                raise serializers.ValidationError({
-                    'motorista_id': 'Motorista é obrigatório para salários e comissões.'
-                })
-        
+        caminhao = attrs.get('caminhao')
+
+        if categoria:
+            # Para SALARIO e COMISSAO: motorista obrigatório, caminhão opcional
+            if categoria.nome in ['SALARIO', 'COMISSAO']:
+                if not motorista:
+                    raise serializers.ValidationError({
+                        'motorista_id': 'Motorista é obrigatório para salários e comissões.'
+                    })
+            # Para outras categorias: caminhão obrigatório
+            else:
+                if not caminhao:
+                    raise serializers.ValidationError({
+                        'caminhao_id': 'Caminhão é obrigatório para esta categoria.'
+                    })
+
         return attrs
 
 

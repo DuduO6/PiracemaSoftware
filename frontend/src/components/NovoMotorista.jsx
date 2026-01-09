@@ -8,7 +8,7 @@ function NovoMotorista() {
 
   const [nome, setNome] = useState("");
   const [cpf, setCpf] = useState("");
-  const [idade, setIdade] = useState("");
+  const [dataNascimento, setDataNascimento] = useState("");
   const [vencCnh, setVencCnh] = useState("");
   const [caminhao, setCaminhao] = useState("");
 
@@ -21,15 +21,41 @@ function NovoMotorista() {
       .catch(err => console.error("Erro ao carregar caminhões:", err));
   }, []);
 
+  const calcularIdade = (dataNasc) => {
+    if (!dataNasc) return 0;
+
+    const hoje = new Date();
+    const nascimento = new Date(dataNasc);
+
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    const mes = hoje.getMonth() - nascimento.getMonth();
+
+    if (
+      mes < 0 ||
+      (mes === 0 && hoje.getDate() < nascimento.getDate())
+    ) {
+      idade--;
+    }
+
+    return idade;
+  };
+
   // Enviar cadastro
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const idadeCalculada = calcularIdade(dataNascimento);
+
+    if (idadeCalculada < 18) {
+      alert("O motorista deve ter pelo menos 18 anos.");
+      return;
+    }
 
     try {
       const body = {
         nome,
         cpf,
-        idade,
+        idade: idadeCalculada, // 👈 idade calculada
         venc_cnh: vencCnh,
         caminhao: caminhao || null,
       };
@@ -69,14 +95,21 @@ function NovoMotorista() {
           required
         />
 
-        <label>Idade</label>
-        <input
-          type="number"
-          className="input"
-          value={idade}
-          onChange={(e) => setIdade(e.target.value)}
-          required
-        />
+        <div className="input-with-preview">
+          <input
+            type="date"
+            className="input"
+            value={dataNascimento}
+            onChange={(e) => setDataNascimento(e.target.value)}
+            required
+          />
+          {dataNascimento && (
+            <span className="idade-preview-inline">
+              {calcularIdade(dataNascimento)} anos
+            </span>
+          )}
+        </div>
+
 
         <label>Vencimento da CNH</label>
         <input
