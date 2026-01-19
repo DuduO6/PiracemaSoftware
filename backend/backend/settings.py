@@ -22,12 +22,14 @@ else:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 ALLOWED_HOSTS = [
-    '127.0.0.1', 
+    '127.0.0.1',
     'localhost',
     '.onrender.com',
     '.vercel.app',
-    os.getenv('RENDER_EXTERNAL_HOSTNAME', '')
+    '.up.railway.app',
+    os.getenv('RAILWAY_PUBLIC_DOMAIN', ''),  # se existir no seu ambiente
 ]
+
 
 AUTH_USER_MODEL = 'register.User'
 
@@ -98,11 +100,11 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT', '3306'),
+        'NAME': os.getenv('DB_NAME') or os.getenv('MYSQLDATABASE'),
+        'USER': os.getenv('DB_USER') or os.getenv('MYSQLUSER'),
+        'PASSWORD': os.getenv('DB_PASSWORD') or os.getenv('MYSQLPASSWORD'),
+        'HOST': os.getenv('DB_HOST') or os.getenv('MYSQLHOST'),
+        'PORT': os.getenv('DB_PORT') or os.getenv('MYSQLPORT', '3306'),
         'OPTIONS': {
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         },
@@ -140,7 +142,9 @@ CORS_ALLOW_HEADERS = [
 CSRF_TRUSTED_ORIGINS = [
     "https://piracema-software.vercel.app",
     "https://*.vercel.app",
+    "https://*.up.railway.app",
 ]
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -171,6 +175,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Security settings for production
 if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
