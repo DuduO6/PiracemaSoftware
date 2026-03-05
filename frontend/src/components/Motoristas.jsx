@@ -3,6 +3,14 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import "../styles/motoristas.css";
 
+const getLocalDateISO = () => {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+  const dia = String(hoje.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+};
+
 function Motoristas() {
   const [motoristas, setMotoristas] = useState([]);
   const [modoEdicao, setModoEdicao] = useState(false);
@@ -17,7 +25,7 @@ function Motoristas() {
     motorista: null,
     valor: "",
     descricao: "",
-    data: new Date().toISOString().split('T')[0]
+    data: getLocalDateISO()
   });
   
   const navigate = useNavigate();
@@ -79,7 +87,7 @@ function Motoristas() {
       motorista: motoristas[0].id,
       valor: "",
       descricao: "",
-      data: new Date().toISOString().split('T')[0]
+      data: getLocalDateISO()
     });
     setShowModalVale(true);
   };
@@ -176,7 +184,7 @@ function Motoristas() {
         motorista: motoristas[0]?.id || null,
         valor: "",
         descricao: "",
-        data: new Date().toISOString().split('T')[0]
+        data: getLocalDateISO()
       });
       carregarDados();
 
@@ -197,7 +205,7 @@ function Motoristas() {
       motorista: motoristas[0]?.id || null,
       valor: "",
       descricao: "",
-      data: new Date().toISOString().split('T')[0]
+      data: getLocalDateISO()
     });
   };
 

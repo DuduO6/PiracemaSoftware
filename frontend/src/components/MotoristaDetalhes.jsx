@@ -3,6 +3,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/api";
 import "../styles/motoristaDetalhes.css";
 
+const formatarDataBR = (dataStr) => {
+  if (!dataStr) return "—";
+  const [ano, mes, dia] = dataStr.split("-");
+  if (!ano || !mes || !dia) return dataStr;
+  return `${dia}/${mes}/${ano}`;
+};
+
 function MotoristaDetalhes() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -170,7 +177,7 @@ function MotoristaDetalhes() {
             <div className="info-item">
               <span className="info-label">Vencimento CNH:</span>
               <span className="info-value">
-                {motorista.venc_cnh ? new Date(motorista.venc_cnh).toLocaleDateString('pt-BR') : '—'}
+                {formatarDataBR(motorista.venc_cnh)}
               </span>
             </div>
           </div>
@@ -312,7 +319,7 @@ function MotoristaDetalhes() {
                         </>
                       ) : (
                         <>
-                          <td>{new Date(vale.data).toLocaleDateString('pt-BR')}</td>
+                          <td>{formatarDataBR(vale.data)}</td>
                           <td>{vale.descricao || '—'}</td>
                           <td>R$ {parseFloat(vale.valor).toFixed(2)}</td>
                           <td>

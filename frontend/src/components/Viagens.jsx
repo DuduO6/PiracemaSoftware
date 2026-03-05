@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from "react";
 import api from "../api/api";
+import PaginationControls from "./PaginationControls.jsx";
 import "../styles/viagens.css";
+
+const ITENS_POR_PAGINA = 12;
 
 const Viagens = () => {
   const [viagens, setViagens] = useState([]);
   const [motoristas, setMotoristas] = useState([]);
   const [valorTotalGeral, setValorTotalGeral] = useState(0);
+  const [ultimoAcertoGeral, setUltimoAcertoGeral] = useState(null);
+  const [resumoAcertoMotorista, setResumoAcertoMotorista] = useState(null);
+  const [resumoAcertoDisponivel, setResumoAcertoDisponivel] = useState(true);
 
   // Modal de adicionar/editar viagem
   const [showModalViagem, setShowModalViagem] = useState(false);
@@ -39,6 +45,7 @@ const Viagens = () => {
     fim: "",
     salvar: false
   });
+  const [paginaAtual, setPaginaAtual] = useState(1);
 
   // Carregar motoristas
   useEffect(() => {
@@ -46,13 +53,27 @@ const Viagens = () => {
       .then((res) => {
         const data = Array.isArray(res.data) ? res.data : res.data.results || Object.values(res.data);
         setMotoristas(data);
-
-        if (data.length > 0 && !viagemData.motorista) {
-          setViagemData((prev) => ({ ...prev, motorista: data[0].id }));
-        }
       })
       .catch((err) => console.error("Erro ao carregar motoristas:", err));
   }, []);
+
+  useEffect(() => {
+    if (!resumoAcertoDisponivel) return;
+
+    api.get("/api/viagens/resumo_acerto/")
+      .then((res) => {
+        setUltimoAcertoGeral(res.data && Object.keys(res.data).length ? res.data : null);
+      })
+      .catch((err) => {
+        if (err.response?.status === 404) {
+          setResumoAcertoDisponivel(false);
+          setUltimoAcertoGeral(null);
+          return;
+        }
+        console.error("Erro ao carregar resumo do último acerto:", err);
+        setUltimoAcertoGeral(null);
+      });
+  }, [resumoAcertoDisponivel]);
 
   // Carregar viagens
   useEffect(() => {
@@ -98,7 +119,17 @@ const Viagens = () => {
       }
     } catch (err) {
       console.error("Erro ao gerar PDF:", err);
-      alert("Erro ao gerar o PDF");
+      if (err.response?.data instanceof Blob) {
+        try {
+          const texto = await err.response.data.text();
+          const json = JSON.parse(texto);
+          alert(json.detail || "Erro ao gerar o PDF");
+          return;
+        } catch (_parseErr) {
+          // fallback abaixo
+        }
+      }
+      alert(err.response?.data?.detail || "Erro ao gerar o PDF");
     }
   };
 
@@ -107,6 +138,42 @@ const Viagens = () => {
     if (!dataISO) return "";
     const data = new Date(dataISO + "T00:00:00"); // evita bug de timezone
     return data.toLocaleDateString("pt-BR");
+  };
+
+  const formatarDataHoraBR = (dataISO) => {
+    if (!dataISO) return "";
+    const data = new Date(dataISO);
+    return data.toLocaleString("pt-BR");
+  };
+
+  const carregarResumoAcertoMotorista = async (motoristaId) => {
+    if (!resumoAcertoDisponivel || !motoristaId) {
+      setResumoAcertoMotorista(null);
+      return;
+    }
+
+    try {
+      const res = await api.get("/api/viagens/resumo_acerto/", {
+        params: { motorista_id: motoristaId }
+      });
+      const resumo = res.data && Object.keys(res.data).length ? res.data : null;
+      setResumoAcertoMotorista(resumo);
+
+      if (resumo?.inicio_sugerido) {
+        setAcertoData((prev) => ({
+          ...prev,
+          inicio: resumo.inicio_sugerido,
+        }));
+      }
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setResumoAcertoDisponivel(false);
+        setResumoAcertoMotorista(null);
+        return;
+      }
+      console.error("Erro ao carregar resumo de acerto do motorista:", err);
+      setResumoAcertoMotorista(null);
+    }
   };
 
 
@@ -179,7 +246,7 @@ const Viagens = () => {
     setModoEdicao(false);
     setViagemData({
       id: null,
-      motorista: motoristas[0]?.id || "",
+      motorista: "",
       origem: "",
       destino: "",
       cliente: "",
@@ -196,7 +263,7 @@ const Viagens = () => {
     setModoEdicao(false);
     setViagemData({
       id: null,
-      motorista: motoristas[0]?.id || "",
+      motorista: "",
       origem: "",
       destino: "",
       cliente: "",
@@ -223,6 +290,10 @@ const Viagens = () => {
     });
   };
 
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [filtro.motorista, filtro.cliente, filtro.localidade, filtro.pago, filtro.inicio, filtro.fim]);
+
   // Filtrar viagens em tempo real
   const viagensFiltradas = viagens
   .filter(v => {
@@ -243,6 +314,18 @@ const Viagens = () => {
 
   const valorTotalFiltrado = viagensFiltradas.reduce((acc, v) => acc + Number(v.valor_total || 0), 0);
   const temFiltroAtivo = filtro.motorista || filtro.cliente || filtro.localidade || filtro.pago || filtro.inicio || filtro.fim;
+  const totalPaginas = Math.max(1, Math.ceil(viagensFiltradas.length / ITENS_POR_PAGINA));
+
+  useEffect(() => {
+    if (paginaAtual > totalPaginas) {
+      setPaginaAtual(totalPaginas);
+    }
+  }, [paginaAtual, totalPaginas]);
+
+  const viagensPaginadas = viagensFiltradas.slice(
+    (paginaAtual - 1) * ITENS_POR_PAGINA,
+    paginaAtual * ITENS_POR_PAGINA
+  );
 
   return (
     <div className="viagens-container">
@@ -268,6 +351,20 @@ const Viagens = () => {
           VALOR TOTAL: R$ {valorTotalFiltrado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
         </p>
       </div>
+
+      {resumoAcertoDisponivel && ultimoAcertoGeral && (
+        <div className="filtros-aplicados">
+          <span className="filtro-badge">
+            Último acerto: {ultimoAcertoGeral.motorista_nome}
+          </span>
+          <span className="filtro-badge">
+            Gerado em: {formatarDataHoraBR(ultimoAcertoGeral.data_geracao)}
+          </span>
+          <span className="filtro-badge">
+            Última viagem englobada: {formatarDataBR(ultimoAcertoGeral.data_ultima_viagem_englobada)}
+          </span>
+        </div>
+      )}
 
       {temFiltroAtivo && (
         <div className="filtros-aplicados">
@@ -298,7 +395,7 @@ const Viagens = () => {
             </tr>
           </thead>
           <tbody>
-            {viagensFiltradas.map(v => (
+            {viagensPaginadas.map(v => (
               <tr key={v.id}>
                 <td>{formatarDataBR(v.data)}</td>
                 <td>{v.origem}</td>
@@ -335,6 +432,12 @@ const Viagens = () => {
             ))}
           </tbody>
         </table>
+        <PaginationControls
+          totalItems={viagensFiltradas.length}
+          itemsPerPage={ITENS_POR_PAGINA}
+          currentPage={paginaAtual}
+          onPageChange={setPaginaAtual}
+        />
       </div>
 
       {/* Modal Filtro */}
@@ -423,6 +526,7 @@ const Viagens = () => {
                 value={viagemData.motorista}
                 onChange={handleViagemInputChange}
               >
+                <option value="">Selecione</option>
                 {motoristas.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.nome}
@@ -516,7 +620,13 @@ const Viagens = () => {
 
       {/* Modal Acerto */}
       {showAcertoModal && (
-        <div className="modal-overlay" onClick={() => setShowAcertoModal(false)}>
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setShowAcertoModal(false);
+            setResumoAcertoMotorista(null);
+          }}
+        >
           <div className="modal-edicao" onClick={(e) => e.stopPropagation()}>
             <h2>Gerar Acerto</h2>
 
@@ -524,7 +634,11 @@ const Viagens = () => {
               <label>Motorista:</label>
               <select
                 value={acertoData.motorista}
-                onChange={e => setAcertoData({ ...acertoData, motorista: e.target.value })}
+                onChange={async (e) => {
+                  const motoristaSelecionado = e.target.value;
+                  setAcertoData((prev) => ({ ...prev, motorista: motoristaSelecionado }));
+                  await carregarResumoAcertoMotorista(motoristaSelecionado);
+                }}
               >
                 <option value="">Selecione</option>
                 {motoristas.map(m => (
@@ -532,6 +646,20 @@ const Viagens = () => {
                 ))}
               </select>
             </div>
+
+            {resumoAcertoDisponivel && resumoAcertoMotorista && (
+              <div className="filtros-aplicados">
+                <span className="filtro-badge">
+                  Último acerto do motorista: {formatarDataHoraBR(resumoAcertoMotorista.data_geracao)}
+                </span>
+                <span className="filtro-badge">
+                  Última viagem englobada: {formatarDataBR(resumoAcertoMotorista.data_ultima_viagem_englobada)}
+                </span>
+                <span className="filtro-badge">
+                  Início sugerido: {formatarDataBR(resumoAcertoMotorista.inicio_sugerido)}
+                </span>
+              </div>
+            )}
 
             <div className="form-group">
               <label>Período:</label>
@@ -571,11 +699,18 @@ const Viagens = () => {
                   gerarAcerto(acertoData.motorista, acertoData.inicio, acertoData.fim, acertoData.salvar);
                   setShowAcertoModal(false);
                   setAcertoData({ motorista: "", inicio: "", fim: "", salvar: false });
+                  setResumoAcertoMotorista(null);
                 }}
               >
                 GERAR PDF
               </button>
-              <button className="btn-cancelar" onClick={() => setShowAcertoModal(false)}>
+              <button
+                className="btn-cancelar"
+                onClick={() => {
+                  setShowAcertoModal(false);
+                  setResumoAcertoMotorista(null);
+                }}
+              >
                 CANCELAR
               </button>
             </div>

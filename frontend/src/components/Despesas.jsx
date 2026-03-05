@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import api from "../api/api";
+import PaginationControls from "./PaginationControls.jsx";
 import "../styles/despesas.css";
+
+const ITENS_POR_PAGINA = 12;
 
 const Despesas = () => {
   const [despesas, setDespesas] = useState([]);
@@ -9,6 +12,7 @@ const Despesas = () => {
   const [motoristas, setMotoristas] = useState([]);
 
   const [showModalDespesa, setShowModalDespesa] = useState(false);
+  const [paginaAtual, setPaginaAtual] = useState(1);
 
   const [despesaData, setDespesaData] = useState({
     categoria_id: "",
@@ -155,6 +159,10 @@ const Despesas = () => {
     });
   };
 
+  useEffect(() => {
+    setPaginaAtual(1);
+  }, [filtro.ano, filtro.mes, filtro.caminhao, filtro.motorista, filtro.categoria, filtro.status, filtro.tipo]);
+
   const removerFiltro = campo => {
     if (campo === "ano" || campo === "mes") return;
     setFiltro(prev => ({ ...prev, [campo]: "" }));
@@ -200,6 +208,18 @@ const Despesas = () => {
       return acc;
     },
     { total: 0, pago: 0, pendente: 0 }
+  );
+  const totalPaginas = Math.max(1, Math.ceil(despesas.length / ITENS_POR_PAGINA));
+
+  useEffect(() => {
+    if (paginaAtual > totalPaginas) {
+      setPaginaAtual(totalPaginas);
+    }
+  }, [paginaAtual, totalPaginas]);
+
+  const despesasPaginadas = despesas.slice(
+    (paginaAtual - 1) * ITENS_POR_PAGINA,
+    paginaAtual * ITENS_POR_PAGINA
   );
 
   /* ==========================
@@ -560,7 +580,7 @@ const Despesas = () => {
                 </td>
               </tr>
             ) : (
-              despesas.map(d => (
+              despesasPaginadas.map(d => (
                 <tr key={d.id}>
                   <td>{d.competencia_formatada}</td>
                   <td>
@@ -608,6 +628,12 @@ const Despesas = () => {
             )}
           </tbody>
         </table>
+        <PaginationControls
+          totalItems={despesas.length}
+          itemsPerPage={ITENS_POR_PAGINA}
+          currentPage={paginaAtual}
+          onPageChange={setPaginaAtual}
+        />
       </div>
 
       {showModalDespesa && (

@@ -1,9 +1,14 @@
 # Ambiente
 .env
+.env.local
+.env.development
+db.sqlite3
+*.sqlite3
+__pycache__/
+*.pyc
 bdlocal.txt
 build_django.spec
 dist
 electron
 venv
 .env.production
-

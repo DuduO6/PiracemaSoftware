@@ -1,9 +1,10 @@
 from rest_framework import viewsets, permissions
+from rest_framework import status
 from .models import Viagem, Motorista, Vale
 from .serializers import ViagemSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from django.http import HttpResponse
 from decimal import Decimal
@@ -32,6 +33,53 @@ class ViagemViewSet(viewsets.ModelViewSet):
         valor_total = peso * valor_tonelada
         serializer.save(usuario=self.request.user, valor_total=valor_total)
 
+    def _get_resumo_ultimo_acerto(self, motorista_id=None):
+        acertos = Acerto.objects.filter(usuario=self.request.user).order_by('-data_geracao')
+        if motorista_id:
+            acertos = acertos.filter(motorista_id=motorista_id)
+
+        ultimo_acerto = acertos.first()
+        if not ultimo_acerto:
+            return None
+
+        ultimo_item = (
+            ItemAcerto.objects.filter(acerto=ultimo_acerto)
+            .order_by('-data', '-id')
+            .first()
+        )
+
+        data_ultima_viagem = ultimo_item.data if ultimo_item else ultimo_acerto.data_fim
+        inicio_sugerido = data_ultima_viagem + timedelta(days=1) if data_ultima_viagem else None
+
+        return {
+            "acerto_id": ultimo_acerto.id,
+            "motorista_id": ultimo_acerto.motorista_id,
+            "motorista_nome": ultimo_acerto.motorista.nome,
+            "data_geracao": ultimo_acerto.data_geracao,
+            "data_inicio": ultimo_acerto.data_inicio,
+            "data_fim": ultimo_acerto.data_fim,
+            "data_ultima_viagem_englobada": data_ultima_viagem,
+            "inicio_sugerido": inicio_sugerido,
+        }
+
+    @action(detail=False, methods=['get'])
+    def resumo_acerto(self, request):
+        motorista_id = request.query_params.get('motorista_id')
+
+        if motorista_id:
+            try:
+                motorista = Motorista.objects.get(id=motorista_id, usuario=request.user)
+            except Motorista.DoesNotExist:
+                return Response(
+                    {"detail": "Motorista não encontrado."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            resumo = self._get_resumo_ultimo_acerto(motorista.id)
+        else:
+            resumo = self._get_resumo_ultimo_acerto()
+
+        return Response(resumo or {})
+
     @action(detail=False, methods=['get'])
     def gerar_acerto(self, request):
         motorista_id = request.query_params.get('motorista_id')
@@ -39,14 +87,55 @@ class ViagemViewSet(viewsets.ModelViewSet):
         fim = request.query_params.get('fim')
         salvar = request.query_params.get('salvar', 'false').lower() == 'true'
 
-        inicio_date = datetime.strptime(inicio, "%Y-%m-%d").date()
-        fim_date = datetime.strptime(fim, "%Y-%m-%d").date()
+        if not motorista_id or not inicio or not fim:
+            return Response(
+                {"detail": "Parâmetros obrigatórios: motorista_id, inicio e fim."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        motorista = Motorista.objects.get(id=motorista_id, usuario=request.user)
+        try:
+            inicio_date = datetime.strptime(inicio, "%Y-%m-%d").date()
+            fim_date = datetime.strptime(fim, "%Y-%m-%d").date()
+        except ValueError:
+            return Response(
+                {"detail": "Formato de data inválido. Use YYYY-MM-DD."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if inicio_date > fim_date:
+            return Response(
+                {"detail": "A data de início não pode ser maior que a data de fim."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            motorista = Motorista.objects.get(id=motorista_id, usuario=request.user)
+        except Motorista.DoesNotExist:
+            return Response(
+                {"detail": "Motorista não encontrado."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        resumo_ultimo_acerto = self._get_resumo_ultimo_acerto(motorista.id)
+
+        inicio_efetivo = inicio_date
+        if resumo_ultimo_acerto and resumo_ultimo_acerto.get("inicio_sugerido"):
+            inicio_efetivo = max(inicio_date, resumo_ultimo_acerto["inicio_sugerido"])
+
+        if inicio_efetivo > fim_date:
+            return Response(
+                {
+                    "detail": (
+                        "Não há período válido para acerto após o último acerto desse motorista. "
+                        "Ajuste a data de fim."
+                    ),
+                    "inicio_sugerido": resumo_ultimo_acerto.get("inicio_sugerido") if resumo_ultimo_acerto else None,
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         viagens = self.get_queryset().filter(
             motorista_id=motorista_id,
-            data__gte=inicio_date,
+            data__gte=inicio_efetivo,
             data__lte=fim_date
         ).order_by('data')
 
@@ -66,7 +155,7 @@ class ViagemViewSet(viewsets.ModelViewSet):
             acerto = Acerto.objects.create(
                 usuario=request.user,
                 motorista=motorista,
-                data_inicio=inicio_date,
+                data_inicio=inicio_efetivo,
                 data_fim=fim_date,
                 total_viagens=total_viagens,
                 valor_total_viagens=total_valor,
@@ -147,7 +236,7 @@ class ViagemViewSet(viewsets.ModelViewSet):
         elementos.append(Spacer(1, 12))
 
         info = Paragraph(
-            f"<b>Período:</b> {inicio} até {fim}<br/>"
+            f"<b>Período:</b> {inicio_efetivo.strftime('%Y-%m-%d')} até {fim}<br/>"
             f"<b>Total de viagens:</b> {total_viagens}",
             styles["Heading3"]
         )

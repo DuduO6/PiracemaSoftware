@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Register from "./components/Register.jsx";
 import Login from "./components/Login.jsx";
@@ -15,6 +16,32 @@ import Acertos from "./components/Acertos.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function App() {
+  useEffect(() => {
+    const handleNumberInputWheel = (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      const numberInput = target.closest('input[type="number"]');
+      if (!numberInput) return;
+
+      if (document.activeElement === numberInput) {
+        numberInput.blur();
+      }
+      event.preventDefault();
+    };
+
+    document.addEventListener("wheel", handleNumberInputWheel, {
+      passive: false,
+      capture: true,
+    });
+
+    return () => {
+      document.removeEventListener("wheel", handleNumberInputWheel, {
+        capture: true,
+      });
+    };
+  }, []);
+
   return (
     <HashRouter>
       <Routes>

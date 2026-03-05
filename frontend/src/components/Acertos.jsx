@@ -1,11 +1,18 @@
 import React, { useEffect, useState } from "react";
 import api from "../api/api";
+import PaginationControls from "./PaginationControls.jsx";
 import "../styles/acertos.css";
+
+const ITENS_POR_PAGINA = 10;
+const ITENS_MODAL_POR_PAGINA = 12;
 
 const Acertos = () => {
   const [acertos, setAcertos] = useState([]);
   const [acertoSelecionado, setAcertoSelecionado] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [paginaAtual, setPaginaAtual] = useState(1);
+  const [paginaItensModal, setPaginaItensModal] = useState(1);
+  const [paginaValesModal, setPaginaValesModal] = useState(1);
 
   useEffect(() => {
     carregarAcertos();
@@ -24,6 +31,8 @@ const Acertos = () => {
     api.get(`/api/acertos/${id}/`)
       .then((res) => {
         setAcertoSelecionado(res.data);
+        setPaginaItensModal(1);
+        setPaginaValesModal(1);
         setShowModal(true);
       })
       .catch((err) => console.error("Erro ao carregar detalhes:", err));
@@ -32,6 +41,8 @@ const Acertos = () => {
   const fecharModal = () => {
     setShowModal(false);
     setAcertoSelecionado(null);
+    setPaginaItensModal(1);
+    setPaginaValesModal(1);
   };
 
   const formatarData = (dataStr) => {
@@ -43,6 +54,29 @@ const Acertos = () => {
     const data = new Date(dataStr);
     return data.toLocaleString('pt-BR');
   };
+
+  const totalPaginas = Math.max(1, Math.ceil(acertos.length / ITENS_POR_PAGINA));
+  useEffect(() => {
+    if (paginaAtual > totalPaginas) {
+      setPaginaAtual(totalPaginas);
+    }
+  }, [paginaAtual, totalPaginas]);
+
+  const acertosPaginados = acertos.slice(
+    (paginaAtual - 1) * ITENS_POR_PAGINA,
+    paginaAtual * ITENS_POR_PAGINA
+  );
+
+  const itensModal = acertoSelecionado?.itens || [];
+  const valesModal = acertoSelecionado?.vales || [];
+  const itensPaginados = itensModal.slice(
+    (paginaItensModal - 1) * ITENS_MODAL_POR_PAGINA,
+    paginaItensModal * ITENS_MODAL_POR_PAGINA
+  );
+  const valesPaginados = valesModal.slice(
+    (paginaValesModal - 1) * ITENS_MODAL_POR_PAGINA,
+    paginaValesModal * ITENS_MODAL_POR_PAGINA
+  );
 
   return (
     <div className="acertos-container">
@@ -65,7 +99,7 @@ const Acertos = () => {
             </tr>
           </thead>
           <tbody>
-            {acertos.map((acerto) => (
+            {acertosPaginados.map((acerto) => (
               <tr key={acerto.id}>
                 <td>{formatarDataHora(acerto.data_geracao)}</td>
                 <td>{acerto.motorista_nome}</td>
@@ -86,6 +120,12 @@ const Acertos = () => {
             ))}
           </tbody>
         </table>
+        <PaginationControls
+          totalItems={acertos.length}
+          itemsPerPage={ITENS_POR_PAGINA}
+          currentPage={paginaAtual}
+          onPageChange={setPaginaAtual}
+        />
       </div>
 
       {/* Modal de Detalhes */}
@@ -126,7 +166,7 @@ const Acertos = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {acertoSelecionado.itens.map((item) => (
+                    {itensPaginados.map((item) => (
                       <tr key={item.id}>
                         <td>{formatarData(item.data)}</td>
                         <td>{item.origem}</td>
@@ -144,6 +184,12 @@ const Acertos = () => {
                     ))}
                   </tbody>
                 </table>
+                <PaginationControls
+                  totalItems={itensModal.length}
+                  itemsPerPage={ITENS_MODAL_POR_PAGINA}
+                  currentPage={paginaItensModal}
+                  onPageChange={setPaginaItensModal}
+                />
               </div>
             </div>
 
@@ -159,7 +205,7 @@ const Acertos = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {acertoSelecionado.vales.map((vale) => (
+                      {valesPaginados.map((vale) => (
                         <tr key={vale.id}>
                           <td>{formatarData(vale.data)}</td>
                           <td>R$ {Number(vale.valor).toFixed(2)}</td>
@@ -167,6 +213,12 @@ const Acertos = () => {
                       ))}
                     </tbody>
                   </table>
+                  <PaginationControls
+                    totalItems={valesModal.length}
+                    itemsPerPage={ITENS_MODAL_POR_PAGINA}
+                    currentPage={paginaValesModal}
+                    onPageChange={setPaginaValesModal}
+                  />
                 </div>
               </div>
             )}

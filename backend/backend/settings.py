@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
+# Overrides locais (não versionados) para evitar uso acidental do banco de produção.
+load_dotenv(BASE_DIR / ".env.local", override=True)
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-vw7ry20zw-4u0yvf&+lf2fc6x*#1n-enzsx3@mero@k#_1hc3i')
 
@@ -97,19 +99,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME') or os.getenv('MYSQLDATABASE'),
-        'USER': os.getenv('DB_USER') or os.getenv('MYSQLUSER'),
-        'PASSWORD': os.getenv('DB_PASSWORD') or os.getenv('MYSQLPASSWORD'),
-        'HOST': os.getenv('DB_HOST') or os.getenv('MYSQLHOST'),
-        'PORT': os.getenv('DB_PORT') or os.getenv('MYSQLPORT', '3306'),
-        'OPTIONS': {
-            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
+USE_SQLITE = os.getenv('USE_SQLITE', 'False') == 'True'
+
+if USE_SQLITE:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('DB_NAME') or os.getenv('MYSQLDATABASE'),
+            'USER': os.getenv('DB_USER') or os.getenv('MYSQLUSER'),
+            'PASSWORD': os.getenv('DB_PASSWORD') or os.getenv('MYSQLPASSWORD'),
+            'HOST': os.getenv('DB_HOST') or os.getenv('MYSQLHOST'),
+            'PORT': os.getenv('DB_PORT') or os.getenv('MYSQLPORT', '3306'),
+            'OPTIONS': {
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
+    }
 
 # CORS Configuration
 CORS_ALLOW_CREDENTIALS = True
