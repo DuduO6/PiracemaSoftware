@@ -104,6 +104,14 @@ function Layout() {
               ACERTOS
             </button>
           </li>
+          <li>
+            <button
+              className={`menu-btn ${isActive("/seguro-cargas") ? "active" : ""}`}
+              onClick={() => handleMenuClick("SEGURO DE CARGAS", "/seguro-cargas")}
+            >
+              SEGURO DE CARGAS
+            </button>
+          </li>
 
           <hr className="divider" />
 

@@ -14,6 +14,7 @@ import Viagens from "./components/Viagens.jsx";
 import Despesas from "./components/Despesas.jsx";
 import Acertos from "./components/Acertos.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import SeguroCargas from "./pages/SeguroCargas.jsx";
 
 function App() {
   useEffect(() => {
@@ -62,6 +63,7 @@ function App() {
           <Route path="/viagens" element={<Viagens />} />
           <Route path="/despesas" element={<Despesas />} />
           <Route path="/acertos" element={<Acertos />} />
+          <Route path="/seguro-cargas" element={<SeguroCargas />} />
         </Route>
       </Routes>
     </HashRouter>

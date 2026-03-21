@@ -108,6 +108,18 @@
   letter-spacing: .4px;
   transition: background 0.15s ease, color 0.15s ease, transform 0.08s ease;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  color: inherit;
+  opacity: 0.9;
 }
 
 .menu-btn:hover {

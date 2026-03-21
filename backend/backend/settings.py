@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     'motoristas',
     'viagens',
     'despesas',
-    'acertos'
+    'acertos',
+    'seguro_cargas',
 ]
 
 MIDDLEWARE = [
