@@ -13,6 +13,13 @@ class Caminhao(models.Model):
     marca_modelo = models.CharField(max_length=200, blank=True, null=True)
 
     qtd_placas = models.PositiveIntegerField(default=1)
+    ipva_anual = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    licenciamento_anual = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    seguro_anual = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    seguro_terceiros_anual = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    km_estimado_ano = models.PositiveIntegerField(default=125000)
+    vida_util_km = models.PositiveIntegerField(default=800000)
+    percentual_valor_residual = models.DecimalField(max_digits=5, decimal_places=2, default=30)
     created_at = models.DateTimeField(auto_now_add=True)
 
 

@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'despesas',
     'acertos',
     'seguro_cargas',
+    'fretes',
 ]
 
 MIDDLEWARE = [

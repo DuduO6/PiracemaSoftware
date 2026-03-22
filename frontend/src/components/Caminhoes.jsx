@@ -122,6 +122,10 @@ function Caminhoes() {
       form.append("qtd_placas", formData.qtd_placas);
       form.append("placa_cavalo", formData.placa_cavalo);
       form.append("renavam_cavalo", formData.renavam_cavalo);
+      form.append("ipva_anual", formData.ipva_anual || 0);
+      form.append("licenciamento_anual", formData.licenciamento_anual || 0);
+      form.append("seguro_anual", formData.seguro_anual || 0);
+      form.append("seguro_terceiros_anual", formData.seguro_terceiros_anual || 0);
 
       // JSON com dados das carretas
       form.append(
@@ -234,6 +238,54 @@ function Caminhoes() {
                 type="text"
                 name="renavam_cavalo"
                 value={formData.renavam_cavalo || ''}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>IPVA anual</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="ipva_anual"
+                value={formData.ipva_anual || ''}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Licenciamento anual</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="licenciamento_anual"
+                value={formData.licenciamento_anual || ''}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Seguro anual</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="seguro_anual"
+                value={formData.seguro_anual || ''}
+                onChange={handleInputChange}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Seguro de terceiros</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                name="seguro_terceiros_anual"
+                value={formData.seguro_terceiros_anual || ''}
                 onChange={handleInputChange}
               />
             </div>

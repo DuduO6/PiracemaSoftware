@@ -112,6 +112,14 @@ function Layout() {
               SEGURO DE CARGAS
             </button>
           </li>
+          <li>
+            <button
+              className={`menu-btn ${isActive("/fretes/calculadora") ? "active" : ""}`}
+              onClick={() => handleMenuClick("CALCULADORA DE FRETE", "/fretes/calculadora")}
+            >
+              CALCULADORA DE FRETE
+            </button>
+          </li>
 
           <hr className="divider" />
 

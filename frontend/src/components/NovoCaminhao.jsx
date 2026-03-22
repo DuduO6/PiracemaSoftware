@@ -8,6 +8,12 @@ function NovoCaminhao() {
 
   const [nomeConjunto, setNomeConjunto] = useState("");
   const [qtdPlacas, setQtdPlacas] = useState(1);
+  const [custos, setCustos] = useState({
+    ipva_anual: "",
+    licenciamento_anual: "",
+    seguro_anual: "",
+    seguro_terceiros_anual: "",
+  });
 
   // Cada entrada representa: { placa, renavam, crlv }
   const [placas, setPlacas] = useState([
@@ -33,6 +39,11 @@ function NovoCaminhao() {
     setPlacas(novaLista);
   };
 
+  const handleCustosChange = event => {
+    const { name, value } = event.target;
+    setCustos(prev => ({ ...prev, [name]: value }));
+  };
+
   // enviar
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,6 +61,10 @@ function NovoCaminhao() {
 
       form.append("nome_conjunto", nomeConjunto);
       form.append("qtd_placas", qtdPlacas);
+      form.append("ipva_anual", custos.ipva_anual || 0);
+      form.append("licenciamento_anual", custos.licenciamento_anual || 0);
+      form.append("seguro_anual", custos.seguro_anual || 0);
+      form.append("seguro_terceiros_anual", custos.seguro_terceiros_anual || 0);
 
       // JSON com dados manuais
       form.append(
@@ -131,6 +146,20 @@ function NovoCaminhao() {
 
           </div>
         ))}
+
+        <h2 className="subtitulo">Custos Fixos Anuais</h2>
+
+        <label>IPVA anual</label>
+        <input type="number" step="0.01" min="0" name="ipva_anual" value={custos.ipva_anual} onChange={handleCustosChange} className="input" />
+
+        <label>Licenciamento anual</label>
+        <input type="number" step="0.01" min="0" name="licenciamento_anual" value={custos.licenciamento_anual} onChange={handleCustosChange} className="input" />
+
+        <label>Seguro anual</label>
+        <input type="number" step="0.01" min="0" name="seguro_anual" value={custos.seguro_anual} onChange={handleCustosChange} className="input" />
+
+        <label>Seguro de terceiros</label>
+        <input type="number" step="0.01" min="0" name="seguro_terceiros_anual" value={custos.seguro_terceiros_anual} onChange={handleCustosChange} className="input" />
 
         <button className="white-btn salvar-btn">SALVAR</button>
       </form>

@@ -15,6 +15,7 @@ import Despesas from "./components/Despesas.jsx";
 import Acertos from "./components/Acertos.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import SeguroCargas from "./pages/SeguroCargas.jsx";
+import FreteCalculator from "./pages/FreteCalculator.jsx";
 
 function App() {
   useEffect(() => {
@@ -64,6 +65,7 @@ function App() {
           <Route path="/despesas" element={<Despesas />} />
           <Route path="/acertos" element={<Acertos />} />
           <Route path="/seguro-cargas" element={<SeguroCargas />} />
+          <Route path="/fretes/calculadora" element={<FreteCalculator />} />
         </Route>
       </Routes>
     </HashRouter>
