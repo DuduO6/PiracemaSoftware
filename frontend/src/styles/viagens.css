@@ -259,6 +259,24 @@
   background: #333;
 }
 
+.form-help-text {
+  display: block;
+  margin-top: 6px;
+  color: #a9a9a9;
+  font-size: 12px;
+}
+
+.form-help-text.bloqueado {
+  color: #f6c26b;
+}
+
+.input-bloqueado {
+  border-color: #7c5b1a !important;
+  background: rgba(124, 91, 26, 0.16) !important;
+  color: #f5d9a1 !important;
+  cursor: not-allowed;
+}
+
 /* Date Range */
 .date-range {
   display: flex;

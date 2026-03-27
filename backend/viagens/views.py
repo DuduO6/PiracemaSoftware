@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions
 from rest_framework import status
 from .models import Viagem, Motorista, Vale
-from .serializers import ViagemSerializer
+from .serializers import ViagemSerializer, AvaliadorViagemSerializer
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from datetime import datetime, timedelta
@@ -18,6 +18,8 @@ from django.contrib.staticfiles import finders
 
 # Importar os modelos de acerto
 from acertos.models import Acerto, ItemAcerto, ValeAcerto
+from fretes.exceptions import FretesError
+from .services.trip_profit_evaluator import avaliar_lucro_viagem
 
 
 class ViagemViewSet(viewsets.ModelViewSet):
@@ -28,10 +30,27 @@ class ViagemViewSet(viewsets.ModelViewSet):
         return Viagem.objects.filter(usuario=self.request.user)
 
     def perform_create(self, serializer):
-        peso = serializer.validated_data.get('peso', 0)
-        valor_tonelada = serializer.validated_data.get('valor_tonelada', 0)
-        valor_total = peso * valor_tonelada
-        serializer.save(usuario=self.request.user, valor_total=valor_total)
+        serializer.save(usuario=self.request.user)
+
+    @action(detail=False, methods=['post'])
+    def avaliar_lucro(self, request):
+        serializer = AvaliadorViagemSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            viagem = self.get_queryset().select_related("motorista").get(id=serializer.validated_data["viagem_id"])
+        except Viagem.DoesNotExist:
+            return Response({"detail": "Viagem não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            resultado = avaliar_lucro_viagem(viagem=viagem, payload=serializer.validated_data)
+        except FretesError as exc:
+            response_payload = {"detail": exc.message, "code": exc.code}
+            if exc.extra:
+                response_payload.update(exc.extra)
+            return Response(response_payload, status=exc.status_code)
+
+        return Response(resultado, status=status.HTTP_200_OK)
 
     def _get_resumo_ultimo_acerto(self, motorista_id=None):
         acertos = Acerto.objects.filter(usuario=self.request.user).order_by('-data_geracao')
