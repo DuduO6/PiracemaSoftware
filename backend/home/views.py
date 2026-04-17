@@ -3,7 +3,6 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
-from django.db.models.functions import TruncDate
 from datetime import timedelta
 from decimal import Decimal
 
@@ -107,19 +106,21 @@ def home_dashboard(request):
 
     # === EVOLUÇÃO DIÁRIA (últimos 7 dias) ===
     evolucao_diaria = (
-        Viagem.objects.filter(motorista__usuario=user, data__gte=hoje - timedelta(days=7))
-        .annotate(dia=TruncDate('data'))
-        .values('dia')
+        Viagem.objects.filter(
+            motorista__usuario=user,
+            data__gte=(hoje - timedelta(days=7)).date(),
+        )
+        .values('data')
         .annotate(
             total_viagens=Count('id'),
             faturamento=Sum('valor_total')
         )
-        .order_by('dia')
+        .order_by('data')
     )
 
     evolucao_formatada = [
         {
-            'dia': item['dia'].strftime('%d/%m'),
+            'dia': item['data'].strftime('%d/%m'),
             'total_viagens': item['total_viagens'],
             'faturamento': float(item['faturamento'] or 0)
         }
