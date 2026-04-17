@@ -5,6 +5,27 @@ from viagens.models import Viagem
 from decimal import Decimal
 
 
+class RegraAcerto(models.Model):
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="regras_acerto",
+    )
+    nome = models.CharField(max_length=120)
+    percentual_comissao = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("13.00"))
+    aplicar_vales_pendentes = models.BooleanField(default=True)
+    desconto_fixo = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    ativo = models.BooleanField(default=True)
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    data_atualizacao = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-ativo", "-data_atualizacao"]
+
+    def __str__(self):
+        return self.nome
+
+
 class Acerto(models.Model):
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -20,6 +41,16 @@ class Acerto(models.Model):
     total_vales = models.DecimalField(max_digits=10, decimal_places=2)
     comissao = models.DecimalField(max_digits=10, decimal_places=2)
     valor_a_receber = models.DecimalField(max_digits=10, decimal_places=2)
+    desconto_fixo = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    desconto_vales = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    percentual_comissao = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("13.00"))
+    regra_aplicada = models.ForeignKey(
+        RegraAcerto,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="acertos",
+    )
     
     observacoes = models.TextField(blank=True, null=True)
 

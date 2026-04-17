@@ -17,6 +17,7 @@ class ValeAcertoSerializer(serializers.ModelSerializer):
 
 class AcertoSerializer(serializers.ModelSerializer):
     motorista_nome = serializers.CharField(source='motorista.nome', read_only=True)
+    regra_aplicada_nome = serializers.CharField(source='regra_aplicada.nome', read_only=True)
     itens = ItemAcertoSerializer(many=True, read_only=True)
     vales = ValeAcertoSerializer(many=True, read_only=True)
 
@@ -24,7 +25,9 @@ class AcertoSerializer(serializers.ModelSerializer):
         model = Acerto
         fields = ['id', 'motorista', 'motorista_nome', 'data_inicio', 'data_fim', 
                   'data_geracao', 'total_viagens', 'valor_total_viagens', 
-                  'total_vales', 'comissao', 'valor_a_receber', 'observacoes',
+                  'total_vales', 'comissao', 'percentual_comissao', 'desconto_fixo',
+                  'desconto_vales', 'valor_a_receber', 'observacoes', 'regra_aplicada',
+                  'regra_aplicada_nome',
                   'itens', 'vales']
         read_only_fields = ['usuario', 'data_geracao']
 

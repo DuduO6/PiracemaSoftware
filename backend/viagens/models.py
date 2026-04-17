@@ -12,6 +12,8 @@ class Viagem(models.Model):
     origem = models.CharField(max_length=255)
     destino = models.CharField(max_length=255)
     cliente = models.CharField(max_length=255)
+    teve_cte = models.BooleanField(default=False)
+    numero_cte = models.CharField(max_length=32, blank=True, default="")
     peso = models.DecimalField(max_digits=10, decimal_places=2)
     valor_tonelada = models.DecimalField(max_digits=10, decimal_places=2)
     valor_total = models.DecimalField(max_digits=10, decimal_places=2, editable=False)

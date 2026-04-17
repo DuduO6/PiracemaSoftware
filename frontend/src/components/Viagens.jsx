@@ -36,6 +36,24 @@ const formatarCampoCalculado = (valor) => {
   return Number.isFinite(numero) ? numero.toFixed(2) : "";
 };
 
+const formatarMoeda = (valor) => `R$ ${Number(valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+
+const getInitialViagemData = () => ({
+  id: null,
+  motorista: "",
+  origem: "",
+  destino: "",
+  cliente: "",
+  teve_cte: false,
+  numero_cte: "",
+  peso: "",
+  valor_tonelada: "",
+  valor_total_informado: "",
+  modo_valor: "",
+  data: "",
+  pago: false,
+});
+
 const Viagens = () => {
   const [viagens, setViagens] = useState([]);
   const [motoristas, setMotoristas] = useState([]);
@@ -46,25 +64,20 @@ const Viagens = () => {
   // Modal de adicionar/editar viagem
   const [showModalViagem, setShowModalViagem] = useState(false);
   const [modoEdicao, setModoEdicao] = useState(false);
-  const [viagemData, setViagemData] = useState({
-    id: null,
-    motorista: "",
-    origem: "",
-    destino: "",
-    cliente: "",
-    peso: "",
-    valor_tonelada: "",
-    valor_total_informado: "",
-    modo_valor: "",
-    data: "",
-    pago: false,
-  });
+  const [viagemData, setViagemData] = useState(getInitialViagemData);
+  const [observacoesImportacao, setObservacoesImportacao] = useState([]);
+  const [importandoXml, setImportandoXml] = useState(false);
+  const [showConfirmacaoModal, setShowConfirmacaoModal] = useState(false);
+  const [showDuplicidadeModal, setShowDuplicidadeModal] = useState(false);
+  const [payloadPendente, setPayloadPendente] = useState(null);
+  const [alertaDuplicidade, setAlertaDuplicidade] = useState(null);
 
   const [showFiltro, setShowFiltro] = useState(false);
   const [filtro, setFiltro] = useState({
     motorista: "",
     cliente: "",
     localidade: "",
+    teve_cte: "",
     pago: "",
     inicio: "",
     fim: ""
@@ -212,6 +225,13 @@ const Viagens = () => {
     const { name, value, type, checked } = e.target;
     setViagemData((prev) => {
       if (type === "checkbox") {
+        if (name === "teve_cte" && !checked) {
+          return {
+            ...prev,
+            teve_cte: false,
+            numero_cte: "",
+          };
+        }
         return {
           ...prev,
           [name]: checked,
@@ -245,6 +265,41 @@ const Viagens = () => {
         [name]: valorTratado,
       };
     });
+  };
+
+  const importarXmlCte = async (arquivo) => {
+    if (!arquivo) return;
+
+    const formData = new FormData();
+    formData.append("arquivo", arquivo);
+    setImportandoXml(true);
+
+    try {
+      const res = await api.post("/api/viagens/importar_cte/", formData);
+      const dados = res.data;
+
+      setViagemData((prev) => ({
+        ...prev,
+        motorista: dados.motorista ? String(dados.motorista) : "",
+        origem: dados.origem || "",
+        destino: dados.destino || "",
+        cliente: dados.cliente || "",
+        teve_cte: Boolean(dados.teve_cte),
+        numero_cte: dados.numero_cte || "",
+        peso: dados.peso || "",
+        valor_tonelada: "",
+        valor_total_informado: dados.valor_total_informado || "",
+        modo_valor: dados.valor_total_informado ? VALOR_TOTAL_FRETE : "",
+        data: dados.data || "",
+        pago: false,
+      }));
+      setObservacoesImportacao(Array.isArray(dados.observacoes) ? dados.observacoes : []);
+    } catch (err) {
+      console.error("Erro ao importar XML do CT-e:", err);
+      alert(err.response?.data?.detail || "Erro ao importar XML do CT-e.");
+    } finally {
+      setImportandoXml(false);
+    }
   };
 
   const handleModoValorFocus = (campo) => {
@@ -305,7 +360,7 @@ const Viagens = () => {
       .catch((err) => console.error("Erro ao remover viagem:", err));
   }
 
-  const handleAdicionarViagem = () => {
+  const prepararSalvarViagem = async () => {
     const temValorTonelada = modoValorAtual === VALOR_POR_TONELADA && Boolean(viagemData.valor_tonelada);
     const temValorTotal = modoValorAtual === VALOR_TOTAL_FRETE && Boolean(viagemData.valor_total_informado);
 
@@ -321,6 +376,11 @@ const Viagens = () => {
 
     if (temValorTonelada && temValorTotal) {
       alert("Informe apenas um dos campos: valor por tonelada ou valor total do frete.");
+      return;
+    }
+
+    if (viagemData.teve_cte && !viagemData.numero_cte) {
+      alert("Informe o número do CT-e.");
       return;
     }
 
@@ -340,9 +400,29 @@ const Viagens = () => {
       delete payload.valor_tonelada;
     }
 
+    try {
+      const res = await api.post("/api/viagens/verificar_duplicidade/", payload);
+      const duplicidade = res.data?.duplicada ? res.data : null;
+      setAlertaDuplicidade(duplicidade);
+      setPayloadPendente(payload);
+
+      if (duplicidade) {
+        setShowDuplicidadeModal(true);
+        return;
+      }
+    } catch (err) {
+      console.error("Erro ao verificar duplicidade:", err);
+      setAlertaDuplicidade(null);
+    }
+
+    setShowConfirmacaoModal(true);
+  };
+
+  const confirmarSalvarViagem = () => {
+    if (!payloadPendente) return;
+
     if (modoEdicao && viagemData.id) {
-      // Editar viagem existente
-      api.put(`/api/viagens/${viagemData.id}/`, payload)
+      api.put(`/api/viagens/${viagemData.id}/`, payloadPendente)
         .then((res) => {
           setViagens((prev) => prev.map(v => v.id === viagemData.id ? res.data : v));
           fecharModal();
@@ -352,8 +432,7 @@ const Viagens = () => {
           alert(err.response?.data?.detail || JSON.stringify(err.response?.data) || "Erro ao editar viagem.");
         });
     } else {
-      // Adicionar nova viagem
-      api.post("/api/viagens/", payload)
+      api.post("/api/viagens/", payloadPendente)
         .then((res) => {
           setViagens((prev) => [...prev, res.data]);
           fecharModal();
@@ -373,6 +452,8 @@ const Viagens = () => {
       origem: viagem.origem,
       destino: viagem.destino,
       cliente: viagem.cliente,
+      teve_cte: Boolean(viagem.teve_cte),
+      numero_cte: viagem.numero_cte || "",
       peso: viagem.peso,
       valor_tonelada: viagem.valor_tonelada,
       valor_total_informado: "",
@@ -380,43 +461,31 @@ const Viagens = () => {
       data: viagem.data,
       pago: viagem.pago,
     });
+    setObservacoesImportacao([]);
     setShowModalViagem(true);
   };
 
   const abrirModalNovo = () => {
     setModoEdicao(false);
-    setViagemData({
-      id: null,
-      motorista: "",
-      origem: "",
-      destino: "",
-      cliente: "",
-      peso: "",
-      valor_tonelada: "",
-      valor_total_informado: "",
-      modo_valor: "",
-      data: "",
-      pago: false,
-    });
+    setViagemData(getInitialViagemData());
+    setObservacoesImportacao([]);
     setShowModalViagem(true);
   };
 
   const fecharModal = () => {
     setShowModalViagem(false);
     setModoEdicao(false);
-    setViagemData({
-      id: null,
-      motorista: "",
-      origem: "",
-      destino: "",
-      cliente: "",
-      peso: "",
-      valor_tonelada: "",
-      valor_total_informado: "",
-      modo_valor: "",
-      data: "",
-      pago: false,
-    });
+    setShowDuplicidadeModal(false);
+    setShowConfirmacaoModal(false);
+    setPayloadPendente(null);
+    setObservacoesImportacao([]);
+    setAlertaDuplicidade(null);
+    setViagemData(getInitialViagemData());
+  };
+
+  const abrirConfirmacaoAposDuplicidade = () => {
+    setShowDuplicidadeModal(false);
+    setShowConfirmacaoModal(true);
   };
 
   // Aplicar filtros
@@ -429,6 +498,7 @@ const Viagens = () => {
       motorista: "",
       cliente: "",
       localidade: "",
+      teve_cte: "",
       pago: "",
       inicio: "",
       fim: ""
@@ -437,7 +507,29 @@ const Viagens = () => {
 
   useEffect(() => {
     setPaginaAtual(1);
-  }, [filtro.motorista, filtro.cliente, filtro.localidade, filtro.pago, filtro.inicio, filtro.fim]);
+  }, [filtro.motorista, filtro.cliente, filtro.localidade, filtro.teve_cte, filtro.pago, filtro.inicio, filtro.fim]);
+
+  const exportarPlanilha = async () => {
+    try {
+      const res = await api.get("/api/viagens/exportar_planilha/", {
+        params: filtro,
+        responseType: "blob",
+      });
+
+      const blob = new Blob([res.data], { type: "text/csv;charset=utf-8;" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "viagens_filtradas.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Erro ao exportar planilha de viagens:", err);
+      alert("Erro ao exportar planilha de viagens.");
+    }
+  };
 
   // Filtrar viagens em tempo real
   const viagensFiltradas = viagens
@@ -449,7 +541,10 @@ const Viagens = () => {
       !v.origem.toLowerCase().includes(filtro.localidade.toLowerCase()) &&
       !v.destino.toLowerCase().includes(filtro.localidade.toLowerCase())
     ) return false;
+    if (filtro.teve_cte === "com_cte" && !v.teve_cte) return false;
+    if (filtro.teve_cte === "sem_cte" && v.teve_cte) return false;
     if (filtro.pago === "nao_pago" && v.pago === true) return false;
+    if (filtro.pago === "pago" && v.pago === false) return false;
     if (filtro.inicio && new Date(v.data) < new Date(filtro.inicio)) return false;
     if (filtro.fim && new Date(v.data) > new Date(filtro.fim)) return false;
     return true;
@@ -486,6 +581,9 @@ const Viagens = () => {
         <button className="white-btn" onClick={() => setShowAcertoModal(true)}>
           GERAR ACERTO
         </button>
+        <button className="white-btn" onClick={exportarPlanilha}>
+          EXPORTAR PLANILHA
+        </button>
       </div>
 
       <div className="info-viagens">
@@ -516,7 +614,10 @@ const Viagens = () => {
           {filtro.motorista && <span className="filtro-badge">Motorista: {motoristas.find(m => String(m.id) === String(filtro.motorista))?.nome}</span>}
           {filtro.cliente && <span className="filtro-badge">Cliente: {filtro.cliente}</span>}
           {filtro.localidade && <span className="filtro-badge">Localidade: {filtro.localidade}</span>}
-          {filtro.pago && <span className="filtro-badge">Não pagos</span>}
+          {filtro.teve_cte === "com_cte" && <span className="filtro-badge">Apenas com CT-e</span>}
+          {filtro.teve_cte === "sem_cte" && <span className="filtro-badge">Apenas sem CT-e</span>}
+          {filtro.pago === "nao_pago" && <span className="filtro-badge">Não pagos</span>}
+          {filtro.pago === "pago" && <span className="filtro-badge">Pagos</span>}
           {filtro.inicio && <span className="filtro-badge">Desde: {filtro.inicio}</span>}
           {filtro.fim && <span className="filtro-badge">Até: {filtro.fim}</span>}
           <button className="filtro-badge filtro-limpar" onClick={limparFiltros}>✕ Limpar</button>
@@ -534,6 +635,7 @@ const Viagens = () => {
               <th>PESO(TN)</th>
               <th>VALOR P/TN</th>
               <th>VALOR</th>
+              <th>CT-E</th>
               <th>PAGO</th>
               <th>MOTORISTA</th>
               <th>AÇÕES</th>
@@ -549,6 +651,7 @@ const Viagens = () => {
                 <td>{v.peso}</td>
                 <td>R$ {Number(v.valor_tonelada).toFixed(2)}</td>
                 <td>R$ {Number(v.valor_total).toFixed(2)}</td>
+                <td>{v.teve_cte ? `Sim${v.numero_cte ? ` - ${v.numero_cte}` : ""}` : "Não"}</td>
                 <td>
                   <span className={`status-badge ${v.pago ? 'status-pago' : 'status-pendente'}`}>
                     {v.pago ? "PAGO" : "PENDENTE"}
@@ -623,12 +726,25 @@ const Viagens = () => {
             </div>
 
             <div className="form-group">
+              <label>CT-e:</label>
+              <select
+                value={filtro.teve_cte}
+                onChange={e => setFiltro({ ...filtro, teve_cte: e.target.value })}
+              >
+                <option value="">Todos</option>
+                <option value="com_cte">Apenas com CT-e</option>
+                <option value="sem_cte">Apenas sem CT-e</option>
+              </select>
+            </div>
+
+            <div className="form-group">
               <label>Pagamento:</label>
               <select
                 value={filtro.pago}
                 onChange={e => setFiltro({ ...filtro, pago: e.target.value })}
               >
                 <option value="">Todos</option>
+                <option value="pago">Apenas Pagos</option>
                 <option value="nao_pago">Apenas Não Pagos</option>
               </select>
             </div>
@@ -663,6 +779,37 @@ const Viagens = () => {
         <div className="modal-overlay" onClick={fecharModal}>
           <div className="modal-edicao" onClick={(e) => e.stopPropagation()}>
             <h2>{modoEdicao ? "Editar Viagem" : "Nova Viagem"}</h2>
+
+            {!modoEdicao && (
+              <div className="importacao-cte-box">
+                <label className="importacao-cte-label" htmlFor="arquivo-cte">
+                  Importar XML do CT-e
+                </label>
+                <input
+                  id="arquivo-cte"
+                  type="file"
+                  accept=".xml,text/xml,application/xml"
+                  onChange={(e) => {
+                    const arquivo = e.target.files?.[0];
+                    importarXmlCte(arquivo);
+                    e.target.value = "";
+                  }}
+                />
+                <small className="form-help-text">
+                  {importandoXml
+                    ? "Lendo XML e preenchendo os campos..."
+                    : "Use o XML para preencher motorista, data, origem, destino, cliente, peso, CT-e e frete."}
+                </small>
+              </div>
+            )}
+
+            {observacoesImportacao.length > 0 && (
+              <div className="importacao-cte-alerta">
+                {observacoesImportacao.map((observacao) => (
+                  <p key={observacao}>{observacao}</p>
+                ))}
+              </div>
+            )}
 
             <div className="form-group">
               <label>Motorista:</label>
@@ -707,6 +854,30 @@ const Viagens = () => {
                 name="cliente"
                 value={viagemData.cliente}
                 onChange={handleViagemInputChange}
+              />
+            </div>
+
+            <div className="form-group-checkbox">
+              <input
+                type="checkbox"
+                name="teve_cte"
+                id="teve_cte"
+                checked={viagemData.teve_cte}
+                onChange={handleViagemInputChange}
+              />
+              <label htmlFor="teve_cte">Viagem com CT-e</label>
+            </div>
+
+            <div className="form-group">
+              <label>Número do CT-e:</label>
+              <input
+                type="text"
+                name="numero_cte"
+                value={viagemData.numero_cte}
+                onChange={handleViagemInputChange}
+                disabled={!viagemData.teve_cte}
+                className={!viagemData.teve_cte ? "input-bloqueado" : ""}
+                placeholder="Ex.: 266"
               />
             </div>
 
@@ -784,11 +955,120 @@ const Viagens = () => {
             </div>
 
             <div className="modal-buttons">
-              <button className="btn-salvar" onClick={handleAdicionarViagem}>
+              <button className="btn-salvar" onClick={prepararSalvarViagem}>
                 {modoEdicao ? "SALVAR" : "ADICIONAR"}
               </button>
               <button className="btn-cancelar" onClick={fecharModal}>
                 CANCELAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDuplicidadeModal && alertaDuplicidade && payloadPendente && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setShowDuplicidadeModal(false);
+            setPayloadPendente(null);
+            setAlertaDuplicidade(null);
+          }}
+        >
+          <div className="modal-edicao modal-alerta" onClick={(e) => e.stopPropagation()}>
+            <h2>Possível Duplicidade</h2>
+            <div className="importacao-cte-alerta importacao-cte-alerta-erro sem-margem">
+              <p>{alertaDuplicidade.detail}</p>
+              <p>
+                Viagem encontrada: #{alertaDuplicidade.viagem_id}
+              </p>
+              <p>
+                {formatarDataBR(alertaDuplicidade.data)} | {alertaDuplicidade.origem} → {alertaDuplicidade.destino}
+              </p>
+              <p>
+                Cliente: {alertaDuplicidade.cliente}
+              </p>
+            </div>
+
+            <p className="confirmacao-texto">
+              Deseja continuar mesmo assim e revisar a prévia antes de salvar?
+            </p>
+
+            <div className="modal-buttons">
+              <button className="btn-salvar" onClick={abrirConfirmacaoAposDuplicidade}>
+                CONTINUAR
+              </button>
+              <button
+                className="btn-cancelar"
+                onClick={() => {
+                  setShowDuplicidadeModal(false);
+                  setPayloadPendente(null);
+                  setAlertaDuplicidade(null);
+                }}
+              >
+                CANCELAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showConfirmacaoModal && payloadPendente && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setShowConfirmacaoModal(false);
+            setPayloadPendente(null);
+            setAlertaDuplicidade(null);
+          }}
+        >
+          <div className="modal-edicao" onClick={(e) => e.stopPropagation()}>
+            <h2>Confirmar Viagem</h2>
+            <div className="preview-grid">
+              <div><strong>Motorista:</strong> {motoristas.find((m) => m.id === Number(payloadPendente.motorista))?.nome || "—"}</div>
+              <div><strong>Data:</strong> {formatarDataBR(payloadPendente.data)}</div>
+              <div><strong>Origem:</strong> {payloadPendente.origem}</div>
+              <div><strong>Destino:</strong> {payloadPendente.destino}</div>
+              <div><strong>Cliente:</strong> {payloadPendente.cliente}</div>
+              <div><strong>Peso:</strong> {Number(payloadPendente.peso).toFixed(2)} TN</div>
+              <div><strong>Valor / TN:</strong> {formatarMoeda(modoValorAtual === VALOR_TOTAL_FRETE ? valorToneladaCalculado : payloadPendente.valor_tonelada)}</div>
+              <div><strong>Valor total:</strong> {formatarMoeda(modoValorAtual === VALOR_POR_TONELADA ? valorTotalCalculado : payloadPendente.valor_total_informado)}</div>
+              <div><strong>CT-e:</strong> {payloadPendente.teve_cte ? `Sim - ${payloadPendente.numero_cte}` : "Não"}</div>
+              <div><strong>Pago:</strong> {payloadPendente.pago ? "Sim" : "Não"}</div>
+            </div>
+
+            {observacoesImportacao.length > 0 && (
+              <div className="importacao-cte-alerta">
+                {observacoesImportacao.map((observacao) => (
+                  <p key={`confirmacao-${observacao}`}>{observacao}</p>
+                ))}
+              </div>
+            )}
+
+            {alertaDuplicidade && (
+              <div className="importacao-cte-alerta importacao-cte-alerta-erro">
+                <p>{alertaDuplicidade.detail}</p>
+                <p>
+                  Viagem encontrada: #{alertaDuplicidade.viagem_id} | {formatarDataBR(alertaDuplicidade.data)} | {alertaDuplicidade.origem} → {alertaDuplicidade.destino}
+                </p>
+              </div>
+            )}
+
+            <p className="confirmacao-texto">As informações acima estão corretas?</p>
+
+            <div className="modal-buttons">
+              <button className="btn-salvar" onClick={confirmarSalvarViagem}>
+                CONFIRMAR E SALVAR
+              </button>
+              <button
+                className="btn-cancelar"
+                onClick={() => {
+                  setShowConfirmacaoModal(false);
+                  setPayloadPendente(null);
+                  setAlertaDuplicidade(null);
+                }}
+              >
+                VOLTAR
               </button>
             </div>
           </div>

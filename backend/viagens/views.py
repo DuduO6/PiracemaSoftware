@@ -3,9 +3,12 @@ from rest_framework import status
 from .models import Viagem, Motorista, Vale
 from .serializers import ViagemSerializer, AvaliadorViagemSerializer
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from datetime import datetime, timedelta
+import csv
 from io import BytesIO
+from django.db.models import Q
 from django.http import HttpResponse
 from decimal import Decimal
 from reportlab.lib.pagesizes import A4
@@ -17,20 +20,132 @@ from reportlab.platypus import Image
 from django.contrib.staticfiles import finders
 
 # Importar os modelos de acerto
-from acertos.models import Acerto, ItemAcerto, ValeAcerto
+from acertos.models import Acerto, ItemAcerto, ValeAcerto, RegraAcerto
 from fretes.exceptions import FretesError
+from .services.cte_importer import parse_cte_xml
 from .services.trip_profit_evaluator import avaliar_lucro_viagem
 
 
 class ViagemViewSet(viewsets.ModelViewSet):
     serializer_class = ViagemSerializer
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get_queryset(self):
         return Viagem.objects.filter(usuario=self.request.user)
 
+    def _apply_trip_filters(self, queryset, params):
+        motorista = params.get("motorista")
+        cliente = (params.get("cliente") or "").strip()
+        localidade = (params.get("localidade") or "").strip()
+        pago = params.get("pago")
+        inicio = params.get("inicio")
+        fim = params.get("fim")
+        teve_cte = params.get("teve_cte")
+
+        if motorista:
+            queryset = queryset.filter(motorista_id=motorista)
+
+        if cliente:
+            queryset = queryset.filter(cliente__icontains=cliente)
+
+        if localidade:
+            queryset = queryset.filter(Q(origem__icontains=localidade) | Q(destino__icontains=localidade))
+
+        if pago == "nao_pago":
+            queryset = queryset.filter(pago=False)
+        elif pago == "pago":
+            queryset = queryset.filter(pago=True)
+
+        if inicio:
+            queryset = queryset.filter(data__gte=inicio)
+
+        if fim:
+            queryset = queryset.filter(data__lte=fim)
+
+        if teve_cte == "com_cte":
+            queryset = queryset.filter(teve_cte=True)
+        elif teve_cte == "sem_cte":
+            queryset = queryset.filter(teve_cte=False)
+
+        return queryset
+
     def perform_create(self, serializer):
         serializer.save(usuario=self.request.user)
+
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def importar_cte(self, request):
+        arquivo = request.FILES.get("arquivo")
+        if not arquivo:
+            return Response({"detail": "Envie um arquivo XML de CT-e."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            dados = parse_cte_xml(arquivo.read(), request.user)
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(dados, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'])
+    def verificar_duplicidade(self, request):
+        viagem_id = request.data.get("id")
+        instance = None
+
+        if viagem_id:
+            try:
+                instance = self.get_queryset().get(id=viagem_id)
+            except Viagem.DoesNotExist:
+                return Response({"detail": "Viagem não encontrada."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = self.get_serializer(instance=instance, data=request.data, partial=bool(instance))
+        serializer.is_valid(raise_exception=True)
+        warning = serializer.build_duplicate_warning(serializer.validated_data)
+
+        return Response(warning or {"duplicada": False}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'])
+    def exportar_planilha(self, request):
+        viagens = (
+            self._apply_trip_filters(self.get_queryset(), request.query_params)
+            .select_related("motorista")
+            .order_by("-data", "-id")
+        )
+
+        response = HttpResponse(content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="viagens_filtradas.csv"'
+        response.write("\ufeff")
+
+        writer = csv.writer(response, delimiter=";")
+        writer.writerow([
+            "Data",
+            "Motorista",
+            "Origem",
+            "Destino",
+            "Cliente",
+            "Peso (TN)",
+            "Valor/TN",
+            "Valor Total",
+            "Com CTE",
+            "Numero CTE",
+            "Pago",
+        ])
+
+        for viagem in viagens:
+            writer.writerow([
+                viagem.data.strftime("%d/%m/%Y"),
+                viagem.motorista.nome if viagem.motorista_id else "",
+                viagem.origem,
+                viagem.destino,
+                viagem.cliente,
+                f"{viagem.peso:.2f}",
+                f"{viagem.valor_tonelada:.2f}",
+                f"{viagem.valor_total:.2f}",
+                "Sim" if viagem.teve_cte else "Nao",
+                viagem.numero_cte or "",
+                "Sim" if viagem.pago else "Nao",
+            ])
+
+        return response
 
     @action(detail=False, methods=['post'])
     def avaliar_lucro(self, request):
@@ -165,9 +280,18 @@ class ViagemViewSet(viewsets.ModelViewSet):
 
         total_valor = sum(v.valor_total for v in viagens)
         total_vales = sum(v.valor for v in vales)
-        comissao = total_valor * Decimal("0.13")
+        regra_acerto = (
+            RegraAcerto.objects.filter(usuario=request.user, ativo=True)
+            .order_by("-data_atualizacao", "-id")
+            .first()
+        )
+        percentual_comissao = regra_acerto.percentual_comissao if regra_acerto else Decimal("13.00")
+        desconto_fixo = regra_acerto.desconto_fixo if regra_acerto else Decimal("0.00")
+        aplicar_vales = regra_acerto.aplicar_vales_pendentes if regra_acerto else True
+        desconto_vales = total_vales if aplicar_vales else Decimal("0.00")
+        comissao = total_valor * (percentual_comissao / Decimal("100"))
         total_viagens = viagens.count()
-        valor_a_receber = comissao - total_vales
+        valor_a_receber = comissao - desconto_vales - desconto_fixo
 
         # SALVAR HISTÓRICO DE ACERTO
         if salvar:
@@ -180,7 +304,11 @@ class ViagemViewSet(viewsets.ModelViewSet):
                 valor_total_viagens=total_valor,
                 total_vales=total_vales,
                 comissao=comissao,
-                valor_a_receber=valor_a_receber
+                valor_a_receber=valor_a_receber,
+                desconto_fixo=desconto_fixo,
+                desconto_vales=desconto_vales,
+                percentual_comissao=percentual_comissao,
+                regra_aplicada=regra_acerto,
             )
 
             # Salvar itens (viagens)
@@ -256,7 +384,8 @@ class ViagemViewSet(viewsets.ModelViewSet):
 
         info = Paragraph(
             f"<b>Período:</b> {inicio_efetivo.strftime('%Y-%m-%d')} até {fim}<br/>"
-            f"<b>Total de viagens:</b> {total_viagens}",
+            f"<b>Total de viagens:</b> {total_viagens}<br/>"
+            f"<b>Comissão:</b> {percentual_comissao}%",
             styles["Heading3"]
         )
         elementos.append(info)
@@ -324,8 +453,9 @@ class ViagemViewSet(viewsets.ModelViewSet):
 
         resumo = Paragraph(
             f"<b>VALOR TOTAL DAS VIAGENS:</b> R$ {total_valor}<br/>"
-            f"<b>TOTAL DE VALES:</b> R$ {total_vales}<br/>"
-            f"<b>COMISSÃO (13%):</b> R$ {comissao}"
+            f"<b>TOTAL DE VALES:</b> R$ {desconto_vales}<br/>"
+            f"<b>DESCONTO FIXO:</b> R$ {desconto_fixo}<br/>"
+            f"<b>COMISSÃO ({percentual_comissao}%):</b> R$ {comissao}"
             f"<br/><b>VALOR A RECEBER:</b> R$ {valor_a_receber}",
             styles["Heading3"]
         )
