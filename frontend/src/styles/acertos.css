@@ -148,6 +148,12 @@
   background-color: #434343;
 }
 
+.tabela-vazia {
+  text-align: center;
+  color: #cfcfcf;
+  font-style: italic;
+}
+
 .acerto-resumo {
   background-color: #ffffff;
   padding: 20px;

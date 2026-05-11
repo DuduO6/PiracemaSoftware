@@ -43,7 +43,11 @@ const formatarMoeda = (valor) => `R$ ${Number(valor || 0).toLocaleString("pt-BR"
 
 const calcularDescontoCte = (viagem) => {
   if (!viagem?.teve_cte) return 0;
-  return Number(viagem.peso || 0) * Number(viagem.valor_tonelada || 0) * 0.1;
+  return Number(viagem.valor_desconto_cte ?? (Number(viagem.peso || 0) * Number(viagem.valor_tonelada || 0) * 0.1));
+};
+
+const calcularValorBruto = (viagem) => {
+  return Number(viagem.valor_bruto ?? (Number(viagem.peso || 0) * Number(viagem.valor_tonelada || 0)));
 };
 
 const getInitialViagemData = () => ({
@@ -411,6 +415,14 @@ const Viagens = () => {
     ? valorTotalCalculado
     : viagemData.valor_total_informado;
 
+  const previewValorBruto = parseDecimalInput(valorTotalExibido);
+  const previewDescontoCte = viagemData.teve_cte && Number.isFinite(previewValorBruto)
+    ? previewValorBruto * 0.1
+    : 0;
+  const previewValorLiquido = Number.isFinite(previewValorBruto)
+    ? previewValorBruto - previewDescontoCte
+    : 0;
+
   const handleRemoverViagem = (id) => {
     if (!window.confirm("Tem certeza que deseja remover esta viagem?")) return;
 
@@ -700,9 +712,10 @@ const Viagens = () => {
                 <th>CLIENTE</th>
                 <th>PESO</th>
                 <th>R$/TN</th>
-                <th>LÍQUIDO</th>
-                <th>DESC. CT-E</th>
-                <th>CT-E</th>
+              <th>BRUTO</th>
+              <th>DESC. CT-E</th>
+              <th>LÍQUIDO</th>
+              <th>CT-E</th>
                 <th>PAGO</th>
                 <th>MOTORISTA</th>
                 <th>AÇÕES</th>
@@ -717,10 +730,11 @@ const Viagens = () => {
                   <td>{v.cliente}</td>
                   <td className="numeric-cell">{v.peso}</td>
                   <td className="numeric-cell">R$ {Number(v.valor_tonelada).toFixed(2)}</td>
-                  <td className="numeric-cell">R$ {Number(v.valor_total).toFixed(2)}</td>
+                  <td className="numeric-cell">R$ {calcularValorBruto(v).toFixed(2)}</td>
                   <td className={`numeric-cell ${v.teve_cte ? "valor-desconto-cte" : ""}`}>
                     {v.teve_cte ? `- R$ ${calcularDescontoCte(v).toFixed(2)}` : "R$ 0.00"}
                   </td>
+                  <td className="numeric-cell">R$ {Number(v.valor_total).toFixed(2)}</td>
                   <td className="nowrap-cell">{v.teve_cte ? `Sim${v.numero_cte ? ` - ${v.numero_cte}` : ""}` : "Não"}</td>
                   <td className="status-cell">
                     <span className={`status-badge ${v.pago ? 'status-pago' : 'status-pendente'}`}>
@@ -1004,6 +1018,23 @@ const Viagens = () => {
               </small>
             </div>
 
+            {Number.isFinite(previewValorBruto) && previewValorBruto > 0 && (
+              <div className="cte-preview-box">
+                <div>
+                  <span>Valor bruto da viagem</span>
+                  <strong>{formatarMoeda(previewValorBruto)}</strong>
+                </div>
+                <div className={viagemData.teve_cte ? "cte-preview-desconto" : ""}>
+                  <span>Desconto CT-e (10%)</span>
+                  <strong>{viagemData.teve_cte ? `- ${formatarMoeda(previewDescontoCte)}` : formatarMoeda(0)}</strong>
+                </div>
+                <div className="cte-preview-liquido">
+                  <span>Valor líquido lançado</span>
+                  <strong>{formatarMoeda(previewValorLiquido)}</strong>
+                </div>
+              </div>
+            )}
+
             <div className="form-group">
               <label>Data:</label>
               <input
@@ -1103,7 +1134,9 @@ const Viagens = () => {
               <div><strong>Cliente:</strong> {payloadPendente.cliente}</div>
               <div><strong>Peso:</strong> {Number(payloadPendente.peso).toFixed(2)} TN</div>
               <div><strong>Valor / TN:</strong> {formatarMoeda(modoValorAtual === VALOR_TOTAL_FRETE ? valorToneladaCalculado : payloadPendente.valor_tonelada)}</div>
-              <div><strong>Valor total:</strong> {formatarMoeda(modoValorAtual === VALOR_POR_TONELADA ? valorTotalCalculado : payloadPendente.valor_total_informado)}</div>
+              <div><strong>Valor bruto:</strong> {formatarMoeda(modoValorAtual === VALOR_POR_TONELADA ? valorTotalCalculado : payloadPendente.valor_total_informado)}</div>
+              <div><strong>Desconto CT-e:</strong> {payloadPendente.teve_cte ? `- ${formatarMoeda(previewDescontoCte)}` : formatarMoeda(0)}</div>
+              <div><strong>Valor líquido:</strong> {formatarMoeda(previewValorLiquido)}</div>
               <div><strong>CT-e:</strong> {payloadPendente.teve_cte ? `Sim - ${payloadPendente.numero_cte}` : "Não"}</div>
               <div><strong>Pago:</strong> {payloadPendente.pago ? "Sim" : "Não"}</div>
             </div>

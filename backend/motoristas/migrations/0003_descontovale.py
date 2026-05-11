@@ -2,23 +2,6 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
-def criar_historico_descontos_existentes(apps, schema_editor):
-    DescontoVale = apps.get_model("motoristas", "DescontoVale")
-    ValeAcerto = apps.get_model("acertos", "ValeAcerto")
-
-    for vale_acerto in ValeAcerto.objects.select_related("vale", "acerto"):
-        if not vale_acerto.vale_id or not vale_acerto.valor:
-            continue
-
-        DescontoVale.objects.create(
-            vale=vale_acerto.vale,
-            acerto=vale_acerto.acerto,
-            valor=vale_acerto.valor,
-            saldo_antes=vale_acerto.valor_original,
-            saldo_depois=vale_acerto.valor_restante,
-        )
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -58,5 +41,4 @@ class Migration(migrations.Migration):
                 "ordering": ["-data"],
             },
         ),
-        migrations.RunPython(criar_historico_descontos_existentes, migrations.RunPython.noop),
     ]

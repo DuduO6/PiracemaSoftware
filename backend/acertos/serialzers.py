@@ -3,11 +3,16 @@ from .models import Acerto, ItemAcerto, ValeAcerto
 
 
 class ItemAcertoSerializer(serializers.ModelSerializer):
+    valor_bruto = serializers.SerializerMethodField()
+
     class Meta:
         model = ItemAcerto
         fields = ['id', 'data', 'origem', 'destino', 'cliente', 'peso', 
-                  'valor_tonelada', 'valor_total', 'teve_cte',
+                  'valor_tonelada', 'valor_bruto', 'valor_total', 'teve_cte',
                   'valor_desconto_cte', 'pago']
+
+    def get_valor_bruto(self, obj):
+        return obj.valor_total + (obj.valor_desconto_cte or 0)
 
 
 class ValeAcertoSerializer(serializers.ModelSerializer):
@@ -19,6 +24,7 @@ class ValeAcertoSerializer(serializers.ModelSerializer):
 class AcertoSerializer(serializers.ModelSerializer):
     motorista_nome = serializers.CharField(source='motorista.nome', read_only=True)
     regra_aplicada_nome = serializers.CharField(source='regra_aplicada.nome', read_only=True)
+    valor_bruto_viagens_com_cte = serializers.SerializerMethodField()
     itens = ItemAcertoSerializer(many=True, read_only=True)
     vales = ValeAcertoSerializer(many=True, read_only=True)
 
@@ -27,6 +33,7 @@ class AcertoSerializer(serializers.ModelSerializer):
         fields = ['id', 'motorista', 'motorista_nome', 'data_inicio', 'data_fim', 
                   'data_geracao', 'total_viagens', 'valor_total_viagens', 
                   'total_viagens_com_cte', 'valor_total_viagens_com_cte',
+                  'valor_bruto_viagens_com_cte',
                   'total_viagens_sem_cte', 'valor_total_viagens_sem_cte',
                   'desconto_cte',
                   'total_vales', 'comissao', 'percentual_comissao', 'desconto_fixo',
@@ -34,6 +41,9 @@ class AcertoSerializer(serializers.ModelSerializer):
                   'regra_aplicada_nome',
                   'itens', 'vales']
         read_only_fields = ['usuario', 'data_geracao']
+
+    def get_valor_bruto_viagens_com_cte(self, obj):
+        return obj.valor_total_viagens_com_cte + (obj.desconto_cte or 0)
 
 
 class AcertoListSerializer(serializers.ModelSerializer):

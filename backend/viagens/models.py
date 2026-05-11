@@ -6,6 +6,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 CASAS_DECIMAIS = Decimal("0.01")
 DESCONTO_CTE = Decimal("0.90")
+PERCENTUAL_DESCONTO_CTE = Decimal("0.10")
 
 class Viagem(models.Model):
     usuario = models.ForeignKey(
@@ -25,10 +26,18 @@ class Viagem(models.Model):
     pago = models.BooleanField(default=False)
 
     def calcular_valor_total(self):
-        valor = self.peso * self.valor_tonelada
+        valor = self.calcular_valor_bruto()
         if self.teve_cte:
             valor *= DESCONTO_CTE
         return valor.quantize(CASAS_DECIMAIS, rounding=ROUND_HALF_UP)
+
+    def calcular_valor_bruto(self):
+        return (self.peso * self.valor_tonelada).quantize(CASAS_DECIMAIS, rounding=ROUND_HALF_UP)
+
+    def calcular_desconto_cte(self):
+        if not self.teve_cte:
+            return Decimal("0.00")
+        return (self.calcular_valor_bruto() * PERCENTUAL_DESCONTO_CTE).quantize(CASAS_DECIMAIS, rounding=ROUND_HALF_UP)
 
     def save(self, *args, **kwargs):
         self.valor_total = self.calcular_valor_total()

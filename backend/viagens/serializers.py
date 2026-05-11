@@ -5,6 +5,8 @@ from .models import Viagem
 
 
 class ViagemSerializer(serializers.ModelSerializer):
+    valor_bruto = serializers.SerializerMethodField()
+    valor_desconto_cte = serializers.SerializerMethodField()
     valor_total_informado = serializers.DecimalField(
         required=False,
         max_digits=10,
@@ -16,10 +18,16 @@ class ViagemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Viagem
         fields = '__all__'
-        read_only_fields = ['usuario', 'valor_total']
+        read_only_fields = ['usuario', 'valor_total', 'valor_bruto', 'valor_desconto_cte']
         extra_kwargs = {
             "valor_tonelada": {"required": False},
         }
+
+    def get_valor_bruto(self, obj):
+        return obj.calcular_valor_bruto()
+
+    def get_valor_desconto_cte(self, obj):
+        return obj.calcular_desconto_cte()
 
     def _normalize_text(self, value):
         return " ".join(str(value or "").strip().upper().split())

@@ -142,8 +142,9 @@ class ViagemViewSet(viewsets.ModelViewSet):
             "Cliente",
             "Peso (TN)",
             "Valor/TN",
-            "Valor Total",
+            "Valor Bruto",
             "Desconto CTE",
+            "Valor Liquido",
             "Com CTE",
             "Numero CTE",
             "Pago",
@@ -158,8 +159,9 @@ class ViagemViewSet(viewsets.ModelViewSet):
                 viagem.cliente,
                 f"{viagem.peso:.2f}",
                 f"{viagem.valor_tonelada:.2f}",
-                f"{viagem.valor_total:.2f}",
+                f"{viagem.calcular_valor_bruto():.2f}",
                 f"{arredondar_moeda(viagem.peso * viagem.valor_tonelada * FATOR_DESCONTO_CTE) if viagem.teve_cte else Decimal('0.00'):.2f}",
+                f"{viagem.valor_total:.2f}",
                 "Sim" if viagem.teve_cte else "Nao",
                 viagem.numero_cte or "",
                 "Sim" if viagem.pago else "Nao",
@@ -354,19 +356,22 @@ class ViagemViewSet(viewsets.ModelViewSet):
                 })
                 vales.append(vale)
 
-        total_valor = sum(v.valor_total for v in viagens)
+        total_valor = arredondar_moeda(sum((v.valor_total for v in viagens), Decimal("0.00")))
         viagens_com_cte = [v for v in viagens if v.teve_cte]
         viagens_sem_cte = [v for v in viagens if not v.teve_cte]
         total_viagens_com_cte = len(viagens_com_cte)
-        valor_total_viagens_com_cte = sum(v.valor_total for v in viagens_com_cte)
+        valor_total_viagens_com_cte = arredondar_moeda(sum((v.valor_total for v in viagens_com_cte), Decimal("0.00")))
+        valor_bruto_viagens_com_cte = arredondar_moeda(
+            sum((v.calcular_valor_bruto() for v in viagens_com_cte), Decimal("0.00"))
+        )
         total_viagens_sem_cte = len(viagens_sem_cte)
-        valor_total_viagens_sem_cte = sum(v.valor_total for v in viagens_sem_cte)
+        valor_total_viagens_sem_cte = arredondar_moeda(sum((v.valor_total for v in viagens_sem_cte), Decimal("0.00")))
         desconto_cte_por_viagem = {
             v.id: arredondar_moeda((v.peso * v.valor_tonelada) * FATOR_DESCONTO_CTE) if v.teve_cte else Decimal("0.00")
             for v in viagens
         }
-        desconto_cte = sum(desconto_cte_por_viagem.values(), Decimal("0.00"))
-        total_vales = sum((item["valor_original"] for item in vales_selecionados), Decimal("0.00"))
+        desconto_cte = arredondar_moeda(sum(desconto_cte_por_viagem.values(), Decimal("0.00")))
+        total_vales = arredondar_moeda(sum((item["valor_original"] for item in vales_selecionados), Decimal("0.00")))
         regra_acerto = (
             RegraAcerto.objects.filter(usuario=request.user, ativo=True)
             .order_by("-data_atualizacao", "-id")
@@ -374,10 +379,11 @@ class ViagemViewSet(viewsets.ModelViewSet):
         )
         percentual_comissao = regra_acerto.percentual_comissao if regra_acerto else Decimal("13.00")
         desconto_fixo = regra_acerto.desconto_fixo if regra_acerto else Decimal("0.00")
-        desconto_vales = sum((item["valor_desconto"] for item in vales_selecionados), Decimal("0.00"))
-        comissao = total_valor * (percentual_comissao / Decimal("100"))
+        desconto_fixo = arredondar_moeda(desconto_fixo)
+        desconto_vales = arredondar_moeda(sum((item["valor_desconto"] for item in vales_selecionados), Decimal("0.00")))
+        comissao = arredondar_moeda(total_valor * (percentual_comissao / Decimal("100")))
         total_viagens = len(viagens)
-        valor_a_receber = comissao - desconto_vales - desconto_fixo
+        valor_a_receber = arredondar_moeda(comissao - desconto_vales - desconto_fixo)
 
         # SALVAR HISTÓRICO DE ACERTO
         if salvar:
@@ -511,7 +517,7 @@ class ViagemViewSet(viewsets.ModelViewSet):
         info = Paragraph(
             f"<b>Período:</b> {inicio_efetivo.strftime('%Y-%m-%d')} até {fim}<br/>"
             f"<b>Total de viagens:</b> {total_viagens}<br/>"
-            f"<b>Viagens com CT-e:</b> {total_viagens_com_cte} - R$ {valor_total_viagens_com_cte}<br/>"
+            f"<b>Viagens com CT-e:</b> {total_viagens_com_cte} - bruto R$ {valor_bruto_viagens_com_cte} | líquido R$ {valor_total_viagens_com_cte}<br/>"
             f"<b>Viagens sem CT-e:</b> {total_viagens_sem_cte} - R$ {valor_total_viagens_sem_cte}<br/>"
             f"<b>Desconto CT-e ({PERCENTUAL_DESCONTO_CTE}%):</b> R$ {desconto_cte}<br/>"
             f"<b>Comissão:</b> {percentual_comissao}%",
@@ -527,8 +533,9 @@ class ViagemViewSet(viewsets.ModelViewSet):
             Paragraph("CLIENTE", table_header_style),
             Paragraph("PESO(TN)", table_header_style),
             Paragraph("VALOR P/TN", table_header_style),
-            Paragraph("VALOR LIQ.", table_header_style),
+            Paragraph("VALOR BRUTO", table_header_style),
             Paragraph("DESC. CT-E", table_header_style),
+            Paragraph("VALOR LIQ.", table_header_style),
             Paragraph("CT-E", table_header_style),
             Paragraph("PAGO", table_header_style),
         ]]
@@ -541,13 +548,14 @@ class ViagemViewSet(viewsets.ModelViewSet):
                 Paragraph(v.cliente or "", table_cell_style),
                 Paragraph(f"{v.peso}", table_cell_style),
                 Paragraph(f"R$ {v.valor_tonelada}", table_cell_style),
-                Paragraph(f"R$ {v.valor_total}", table_cell_style),
+                Paragraph(f"R$ {v.calcular_valor_bruto()}", table_cell_style),
                 Paragraph(f"R$ {desconto_cte_por_viagem[v.id]}", table_cell_style),
+                Paragraph(f"R$ {v.valor_total}", table_cell_style),
                 Paragraph("SIM" if v.teve_cte else "NÃO", table_cell_style),
                 Paragraph("SIM" if v.pago else "NÃO", table_cell_style),
             ])
 
-        col_widths = [2.1*cm, 4.2*cm, 4.2*cm, 4.5*cm, 1.8*cm, 2.2*cm, 2.2*cm, 2.2*cm, 1.4*cm, 1.4*cm]
+        col_widths = [1.9*cm, 3.8*cm, 3.8*cm, 4.1*cm, 1.6*cm, 2*cm, 2*cm, 2*cm, 2*cm, 1.3*cm, 1.3*cm]
         
         tabela = Table(tabela_dados, colWidths=col_widths, repeatRows=1)
         tabela.setStyle(TableStyle([
@@ -571,9 +579,8 @@ class ViagemViewSet(viewsets.ModelViewSet):
 
         elementos.append(Paragraph("<b>Vales selecionados para desconto</b>", styles["Heading2"]))
 
+        tabela_vales = [["DATA", "SALDO ANTES", "DESCONTO", "SALDO APÓS", "SITUAÇÃO"]]
         if vales_selecionados:
-            tabela_vales = [["DATA", "SALDO ANTES", "DESCONTO", "SALDO APÓS", "SITUAÇÃO"]]
-
             for item in vales_selecionados:
                 vale = item["vale"]
                 tabela_vales.append([
@@ -583,19 +590,18 @@ class ViagemViewSet(viewsets.ModelViewSet):
                     f"R$ {item['valor_restante']}",
                     "QUITADO" if item["quitado"] else "PARCIAL",
                 ])
-
-            tabela2 = Table(tabela_vales, colWidths=[3.5*cm, 4*cm, 4*cm, 4*cm, 3.5*cm], repeatRows=1)
-            tabela2.setStyle(TableStyle([
-                ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
-                ("GRID", (0,0), (-1,-1), 0.8, colors.black),
-                ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
-                ("ALIGN", (0,0), (-1,-1), "CENTER"),
-                ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.Color(0.95, 0.95, 0.95)]),
-            ]))
-
-            elementos.append(tabela2)
         else:
-            elementos.append(Paragraph("Nenhum vale selecionado para desconto.", styles["Normal"]))
+            tabela_vales.append(["-", "-", "R$ 0.00", "-", "NENHUM VALE DESCONTADO"])
+
+        tabela2 = Table(tabela_vales, colWidths=[3.5*cm, 4*cm, 4*cm, 4*cm, 5.5*cm], repeatRows=1)
+        tabela2.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
+            ("GRID", (0,0), (-1,-1), 0.8, colors.black),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+            ("ALIGN", (0,0), (-1,-1), "CENTER"),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.Color(0.95, 0.95, 0.95)]),
+        ]))
+        elementos.append(tabela2)
 
         elementos.append(PageBreak())
 
@@ -603,9 +609,10 @@ class ViagemViewSet(viewsets.ModelViewSet):
         resumo_dados = [
             ["DESCRIÇÃO", "QUANTIDADE", "VALOR"],
             ["Valor total líquido das viagens", str(total_viagens), f"R$ {total_valor}"],
-            ["Viagens com CT-e", str(total_viagens_com_cte), f"R$ {valor_total_viagens_com_cte}"],
-            ["Viagens sem CT-e", str(total_viagens_sem_cte), f"R$ {valor_total_viagens_sem_cte}"],
+            ["Viagens com CT-e - valor bruto", str(total_viagens_com_cte), f"R$ {valor_bruto_viagens_com_cte}"],
             [f"Desconto CT-e ({PERCENTUAL_DESCONTO_CTE}%)", "-", f"- R$ {desconto_cte}"],
+            ["Viagens com CT-e - valor líquido após desconto", str(total_viagens_com_cte), f"R$ {valor_total_viagens_com_cte}"],
+            ["Viagens sem CT-e", str(total_viagens_sem_cte), f"R$ {valor_total_viagens_sem_cte}"],
             ["Total de vales descontados", "-", f"- R$ {desconto_vales}"],
             ["Desconto fixo", "-", f"- R$ {desconto_fixo}"],
             [f"Comissão do motorista ({percentual_comissao}% sobre o valor líquido)", "-", f"R$ {comissao}"],

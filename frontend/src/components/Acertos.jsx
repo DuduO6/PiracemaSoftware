@@ -77,6 +77,13 @@ const Acertos = () => {
     (paginaValesModal - 1) * ITENS_MODAL_POR_PAGINA,
     paginaValesModal * ITENS_MODAL_POR_PAGINA
   );
+  const calcularValorBrutoCte = (acerto) => {
+    if (acerto?.valor_bruto_viagens_com_cte !== undefined && acerto?.valor_bruto_viagens_com_cte !== null) {
+      return Number(acerto.valor_bruto_viagens_com_cte);
+    }
+
+    return Number(acerto?.valor_total_viagens_com_cte || 0) + Number(acerto?.desconto_cte || 0);
+  };
 
   return (
     <div className="acertos-container">
@@ -161,8 +168,9 @@ const Acertos = () => {
                       <th>CLIENTE</th>
                       <th>PESO</th>
                       <th>R$/TN</th>
-                      <th>VALOR</th>
+                      <th>BRUTO</th>
                       <th>DESC. CT-E</th>
+                      <th>LÍQUIDO</th>
                       <th>CT-E</th>
                       <th>PAGO</th>
                     </tr>
@@ -176,8 +184,9 @@ const Acertos = () => {
                         <td>{item.cliente}</td>
                         <td>{item.peso}</td>
                         <td>R$ {Number(item.valor_tonelada).toFixed(2)}</td>
-                        <td>R$ {Number(item.valor_total).toFixed(2)}</td>
+                        <td>R$ {Number(item.valor_bruto || item.valor_total).toFixed(2)}</td>
                         <td>R$ {Number(item.valor_desconto_cte || 0).toFixed(2)}</td>
+                        <td>R$ {Number(item.valor_total).toFixed(2)}</td>
                         <td>{item.teve_cte ? "SIM" : "NÃO"}</td>
                         <td>
                           <span className={`status-badge ${item.pago ? 'status-pago' : 'status-pendente'}`}>
@@ -197,22 +206,22 @@ const Acertos = () => {
               </div>
             </div>
 
-            {acertoSelecionado.vales.length > 0 && (
-              <div className="acerto-section">
-                <h3>Vales descontados ({acertoSelecionado.vales.length})</h3>
-                <div className="table-wrapper-modal">
-                  <table className="tabela-modal">
-                    <thead>
-                      <tr>
-                        <th>DATA</th>
-                        <th>SALDO ANTES</th>
-                        <th>DESCONTO</th>
-                        <th>SALDO APÓS</th>
-                        <th>SITUAÇÃO</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {valesPaginados.map((vale) => (
+            <div className="acerto-section">
+              <h3>Vales descontados ({acertoSelecionado.vales.length})</h3>
+              <div className="table-wrapper-modal">
+                <table className="tabela-modal">
+                  <thead>
+                    <tr>
+                      <th>DATA</th>
+                      <th>SALDO ANTES</th>
+                      <th>DESCONTO</th>
+                      <th>SALDO APÓS</th>
+                      <th>SITUAÇÃO</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {valesPaginados.length > 0 ? (
+                      valesPaginados.map((vale) => (
                         <tr key={vale.id}>
                           <td>{formatarData(vale.data)}</td>
                           <td>R$ {Number(vale.valor_original || 0).toFixed(2)}</td>
@@ -220,18 +229,22 @@ const Acertos = () => {
                           <td>R$ {Number(vale.valor_restante || 0).toFixed(2)}</td>
                           <td>{vale.quitado ? "QUITADO" : "PARCIAL"}</td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  <PaginationControls
-                    totalItems={valesModal.length}
-                    itemsPerPage={ITENS_MODAL_POR_PAGINA}
-                    currentPage={paginaValesModal}
-                    onPageChange={setPaginaValesModal}
-                  />
-                </div>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="tabela-vazia">Nenhum vale descontado neste acerto.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                <PaginationControls
+                  totalItems={valesModal.length}
+                  itemsPerPage={ITENS_MODAL_POR_PAGINA}
+                  currentPage={paginaValesModal}
+                  onPageChange={setPaginaValesModal}
+                />
               </div>
-            )}
+            </div>
 
             <div className="acerto-resumo">
               <table className="resumo-table">
@@ -249,7 +262,17 @@ const Acertos = () => {
                     <td>R$ {Number(acertoSelecionado.valor_total_viagens).toFixed(2)}</td>
                   </tr>
                   <tr>
-                    <td>Com CT-e</td>
+                    <td>Com CT-e - valor bruto</td>
+                    <td>{acertoSelecionado.total_viagens_com_cte || 0}</td>
+                    <td>R$ {calcularValorBrutoCte(acertoSelecionado).toFixed(2)}</td>
+                  </tr>
+                  <tr className="resumo-desconto">
+                    <td>Desconto CT-e (10%)</td>
+                    <td>-</td>
+                    <td>- R$ {Number(acertoSelecionado.desconto_cte || 0).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td>Com CT-e - líquido após desconto</td>
                     <td>{acertoSelecionado.total_viagens_com_cte || 0}</td>
                     <td>R$ {Number(acertoSelecionado.valor_total_viagens_com_cte || 0).toFixed(2)}</td>
                   </tr>
@@ -257,11 +280,6 @@ const Acertos = () => {
                     <td>Sem CT-e</td>
                     <td>{acertoSelecionado.total_viagens_sem_cte || 0}</td>
                     <td>R$ {Number(acertoSelecionado.valor_total_viagens_sem_cte || 0).toFixed(2)}</td>
-                  </tr>
-                  <tr className="resumo-desconto">
-                    <td>Desconto CT-e (10%)</td>
-                    <td>-</td>
-                    <td>- R$ {Number(acertoSelecionado.desconto_cte || 0).toFixed(2)}</td>
                   </tr>
                   <tr>
                     <td>Saldo dos Vales Selecionados</td>

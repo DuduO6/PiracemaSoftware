@@ -115,7 +115,7 @@
 }
 
 .viagens-table {
-  min-width: 1280px;
+  min-width: 1380px;
   width: 100%;
   border-collapse: collapse;
   background: transparent;
@@ -173,27 +173,29 @@
 .viagens-table th:nth-child(7),
 .viagens-table td:nth-child(7),
 .viagens-table th:nth-child(8),
-.viagens-table td:nth-child(8) {
-  width: 104px;
-}
-
+.viagens-table td:nth-child(8),
 .viagens-table th:nth-child(9),
 .viagens-table td:nth-child(9) {
-  width: 98px;
+  width: 104px;
 }
 
 .viagens-table th:nth-child(10),
 .viagens-table td:nth-child(10) {
-  width: 108px;
+  width: 98px;
 }
 
 .viagens-table th:nth-child(11),
 .viagens-table td:nth-child(11) {
-  width: 145px;
+  width: 108px;
 }
 
 .viagens-table th:nth-child(12),
 .viagens-table td:nth-child(12) {
+  width: 145px;
+}
+
+.viagens-table th:nth-child(13),
+.viagens-table td:nth-child(13) {
   width: 166px;
 }
 
@@ -214,6 +216,44 @@
 .valor-desconto-cte {
   color: #ff6b5f;
   font-weight: 700;
+}
+
+.cte-preview-box {
+  background: #0a0a0a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 14px;
+  margin: 12px 0 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.cte-preview-box div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+}
+
+.cte-preview-box span {
+  color: #cfcfcf;
+}
+
+.cte-preview-box strong {
+  color: #ffffff;
+}
+
+.cte-preview-desconto strong {
+  color: #ff6b5f;
+}
+
+.cte-preview-liquido {
+  border-top: 1px solid #333;
+  padding-top: 8px;
+}
+
+.cte-preview-liquido strong {
+  color: #4caf50;
 }
 
 .viagens-table tbody tr {
