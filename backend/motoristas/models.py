@@ -37,8 +37,35 @@ class Vale(models.Model):
     )
 
     data = models.DateField()
+    valor_original = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     valor = models.DecimalField(max_digits=10, decimal_places=2)
+    valor_descontado = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     pago = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Vale {self.valor} - {self.motorista.nome}"
+
+
+class DescontoVale(models.Model):
+    vale = models.ForeignKey(
+        Vale,
+        on_delete=models.CASCADE,
+        related_name="descontos",
+    )
+    acerto = models.ForeignKey(
+        "acertos.Acerto",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="descontos_vales",
+    )
+    data = models.DateTimeField(auto_now_add=True)
+    valor = models.DecimalField(max_digits=10, decimal_places=2)
+    saldo_antes = models.DecimalField(max_digits=10, decimal_places=2)
+    saldo_depois = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        ordering = ["-data"]
+
+    def __str__(self):
+        return f"Desconto R$ {self.valor} - {self.vale.motorista.nome}"

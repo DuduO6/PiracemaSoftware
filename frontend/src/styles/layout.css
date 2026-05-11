@@ -171,9 +171,10 @@
 .main-content {
   margin-left: 0;
   flex: 1;
+  min-width: 0;
   min-height: 100vh;
   transition: margin-left 0.28s cubic-bezier(.2,.9,.2,1);
-  width: 100%;
+  width: auto;
 }
 
 /* empurra conteúdo quando sidebar aberta em desktop */

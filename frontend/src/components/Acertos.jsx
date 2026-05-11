@@ -162,6 +162,8 @@ const Acertos = () => {
                       <th>PESO</th>
                       <th>R$/TN</th>
                       <th>VALOR</th>
+                      <th>DESC. CT-E</th>
+                      <th>CT-E</th>
                       <th>PAGO</th>
                     </tr>
                   </thead>
@@ -175,6 +177,8 @@ const Acertos = () => {
                         <td>{item.peso}</td>
                         <td>R$ {Number(item.valor_tonelada).toFixed(2)}</td>
                         <td>R$ {Number(item.valor_total).toFixed(2)}</td>
+                        <td>R$ {Number(item.valor_desconto_cte || 0).toFixed(2)}</td>
+                        <td>{item.teve_cte ? "SIM" : "NÃO"}</td>
                         <td>
                           <span className={`status-badge ${item.pago ? 'status-pago' : 'status-pendente'}`}>
                             {item.pago ? "SIM" : "NÃO"}
@@ -195,20 +199,26 @@ const Acertos = () => {
 
             {acertoSelecionado.vales.length > 0 && (
               <div className="acerto-section">
-                <h3>Vales não pagos ({acertoSelecionado.vales.length})</h3>
+                <h3>Vales descontados ({acertoSelecionado.vales.length})</h3>
                 <div className="table-wrapper-modal">
                   <table className="tabela-modal">
                     <thead>
                       <tr>
                         <th>DATA</th>
-                        <th>VALOR</th>
+                        <th>SALDO ANTES</th>
+                        <th>DESCONTO</th>
+                        <th>SALDO APÓS</th>
+                        <th>SITUAÇÃO</th>
                       </tr>
                     </thead>
                     <tbody>
                       {valesPaginados.map((vale) => (
                         <tr key={vale.id}>
                           <td>{formatarData(vale.data)}</td>
+                          <td>R$ {Number(vale.valor_original || 0).toFixed(2)}</td>
                           <td>R$ {Number(vale.valor).toFixed(2)}</td>
+                          <td>R$ {Number(vale.valor_restante || 0).toFixed(2)}</td>
+                          <td>{vale.quitado ? "QUITADO" : "PARCIAL"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -224,22 +234,57 @@ const Acertos = () => {
             )}
 
             <div className="acerto-resumo">
-              <div className="resumo-item">
-                <span>Valor Total das Viagens:</span>
-                <strong>R$ {Number(acertoSelecionado.valor_total_viagens).toFixed(2)}</strong>
-              </div>
-              <div className="resumo-item">
-                <span>Total de Vales:</span>
-                <strong>R$ {Number(acertoSelecionado.total_vales).toFixed(2)}</strong>
-              </div>
-              <div className="resumo-item">
-                <span>Comissão (13%):</span>
-                <strong>R$ {Number(acertoSelecionado.comissao).toFixed(2)}</strong>
-              </div>
-              <div className="resumo-item destaque">
-                <span>Valor a Receber:</span>
-                <strong>R$ {Number(acertoSelecionado.valor_a_receber).toFixed(2)}</strong>
-              </div>
+              <table className="resumo-table">
+                <thead>
+                  <tr>
+                    <th>DESCRIÇÃO</th>
+                    <th>QUANTIDADE</th>
+                    <th>VALOR</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Valor Total Líquido das Viagens</td>
+                    <td>{acertoSelecionado.total_viagens}</td>
+                    <td>R$ {Number(acertoSelecionado.valor_total_viagens).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td>Com CT-e</td>
+                    <td>{acertoSelecionado.total_viagens_com_cte || 0}</td>
+                    <td>R$ {Number(acertoSelecionado.valor_total_viagens_com_cte || 0).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td>Sem CT-e</td>
+                    <td>{acertoSelecionado.total_viagens_sem_cte || 0}</td>
+                    <td>R$ {Number(acertoSelecionado.valor_total_viagens_sem_cte || 0).toFixed(2)}</td>
+                  </tr>
+                  <tr className="resumo-desconto">
+                    <td>Desconto CT-e (10%)</td>
+                    <td>-</td>
+                    <td>- R$ {Number(acertoSelecionado.desconto_cte || 0).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td>Saldo dos Vales Selecionados</td>
+                    <td>-</td>
+                    <td>- R$ {Number(acertoSelecionado.total_vales).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td>Desconto Aplicado em Vales</td>
+                    <td>{acertoSelecionado.vales?.length || 0}</td>
+                    <td>- R$ {Number(acertoSelecionado.desconto_vales || 0).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td>Comissão ({Number(acertoSelecionado.percentual_comissao || 13).toFixed(2)}% sobre o valor líquido)</td>
+                    <td>-</td>
+                    <td>R$ {Number(acertoSelecionado.comissao).toFixed(2)}</td>
+                  </tr>
+                  <tr className="resumo-valor-pagar">
+                    <td>Valor a Pagar ao Motorista</td>
+                    <td>-</td>
+                    <td>R$ {Number(acertoSelecionado.valor_a_receber).toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
             <div className="modal-buttons">

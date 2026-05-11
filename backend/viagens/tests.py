@@ -66,6 +66,26 @@ class ViagemSerializerTests(TestCase):
         self.assertEqual(viagem.valor_tonelada, Decimal("55.00"))
         self.assertEqual(viagem.valor_total, Decimal("2200.00"))
 
+    def test_desconta_dez_por_cento_quando_tem_cte(self):
+        serializer = ViagemSerializer(data={
+            "motorista": self.motorista.id,
+            "data": "2026-03-27",
+            "origem": "Arcos",
+            "destino": "Piracema",
+            "cliente": "Cliente Teste",
+            "peso": "40.00",
+            "valor_tonelada": "55.00",
+            "teve_cte": True,
+            "numero_cte": "266",
+            "pago": False,
+        })
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        viagem = serializer.save(usuario=self.user)
+
+        self.assertEqual(viagem.valor_tonelada, Decimal("55.00"))
+        self.assertEqual(viagem.valor_total, Decimal("1980.00"))
+
     def test_exige_numero_cte_quando_teve_cte(self):
         serializer = ViagemSerializer(data={
             "motorista": self.motorista.id,

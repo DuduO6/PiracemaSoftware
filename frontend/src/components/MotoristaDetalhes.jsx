@@ -19,13 +19,21 @@ function MotoristaDetalhes() {
   const [loading, setLoading] = useState(true);
   const [editandoVale, setEditandoVale] = useState(null);
   const [valeEditData, setValeEditData] = useState({});
+  const [showDescontoValeModal, setShowDescontoValeModal] = useState(false);
+  const [acertosMotorista, setAcertosMotorista] = useState([]);
+  const [descontoValeData, setDescontoValeData] = useState({
+    vale_id: "",
+    valor_desconto: "",
+    acerto_id: "",
+  });
+  const [valeHistoricoSelecionado, setValeHistoricoSelecionado] = useState(null);
 
   useEffect(() => {
     carregarDados();
   }, [id]);
 
   const carregarDados = () => {
-    api.get(`/api/motoristas/${id}/`)
+    return api.get(`/api/motoristas/${id}/`)
       .then(res => {
         setMotorista(res.data);
         
@@ -121,10 +129,73 @@ function MotoristaDetalhes() {
     }
   };
 
+  const abrirModalDescontoVale = async () => {
+    try {
+      const acertosRes = await api.get("/api/acertos/");
+      const acertos = Array.isArray(acertosRes.data) ? acertosRes.data : acertosRes.data.results || [];
+      setAcertosMotorista(acertos.filter((acerto) => String(acerto.motorista) === String(id)));
+    } catch (err) {
+      console.error("Erro ao carregar acertos do motorista:", err);
+      setAcertosMotorista([]);
+    }
+
+    setDescontoValeData({
+      vale_id: "",
+      valor_desconto: "",
+      acerto_id: "",
+    });
+    setShowDescontoValeModal(true);
+  };
+
+  const handleValeDescontoChange = (valeId) => {
+    const vale = vales.find((item) => String(item.id) === String(valeId));
+    setDescontoValeData({
+      vale_id: valeId,
+      valor_desconto: vale ? String(vale.valor) : "",
+      acerto_id: "",
+    });
+  };
+
+  const handleDescontarVale = async () => {
+    if (!descontoValeData.vale_id) {
+      alert("Selecione um vale.");
+      return;
+    }
+
+    const vale = vales.find((item) => String(item.id) === String(descontoValeData.vale_id));
+    const valorDesconto = Number(String(descontoValeData.valor_desconto).replace(",", "."));
+    if (!vale || !valorDesconto || valorDesconto <= 0 || valorDesconto > Number(vale.valor)) {
+      alert("Informe um valor de desconto válido para o saldo do vale.");
+      return;
+    }
+
+    try {
+      await api.post(`/api/vales/${descontoValeData.vale_id}/descontar/`, {
+        valor_desconto: valorDesconto,
+        acerto_id: descontoValeData.acerto_id || null,
+      });
+      await carregarDados();
+      setShowDescontoValeModal(false);
+      alert("Vale descontado com sucesso!");
+    } catch (err) {
+      console.error("Erro ao descontar vale:", err);
+      alert(err.response?.data?.detail || "Erro ao descontar vale");
+    }
+  };
+
   const calcularTotalVales = () => {
     return vales
       .filter(v => !v.pago)
       .reduce((total, vale) => total + parseFloat(vale.valor), 0);
+  };
+
+  const calcularTotalValesDescontados = () => {
+    return vales.reduce((total, vale) => total + parseFloat(vale.valor_descontado || 0), 0);
+  };
+
+  const formatarDataHoraBR = (dataStr) => {
+    if (!dataStr) return "—";
+    return new Date(dataStr).toLocaleString("pt-BR");
   };
 
   if (loading) {
@@ -187,8 +258,14 @@ function MotoristaDetalhes() {
           <h3 className="section-titulo">Vales Pendentes</h3>
           <div className="vales-resumo">
             <p className="total-vales">
-              Total a Pagar: <strong>R$ {calcularTotalVales().toFixed(2)}</strong>
+              Saldo pendente: <strong>R$ {calcularTotalVales().toFixed(2)}</strong>
             </p>
+            <p className="total-vales total-vales-descontados">
+              Já descontado: <strong>R$ {calcularTotalValesDescontados().toFixed(2)}</strong>
+            </p>
+            <button className="btn-descontar-vale" onClick={abrirModalDescontoVale}>
+              DESCONTAR VALE
+            </button>
           </div>
         </div>
 
@@ -256,7 +333,9 @@ function MotoristaDetalhes() {
                   <tr>
                     <th>Data</th>
                     <th>Descrição</th>
-                    <th>Valor</th>
+                    <th>Valor Original</th>
+                    <th>Descontado</th>
+                    <th>Saldo</th>
                     <th>Pago</th>
                     <th>Ações</th>
                   </tr>
@@ -283,6 +362,8 @@ function MotoristaDetalhes() {
                               placeholder="Descrição"
                             />
                           </td>
+                          <td>R$ {parseFloat(vale.valor_original || vale.valor).toFixed(2)}</td>
+                          <td>R$ {parseFloat(vale.valor_descontado || 0).toFixed(2)}</td>
                           <td>
                             <input
                               type="number"
@@ -321,6 +402,8 @@ function MotoristaDetalhes() {
                         <>
                           <td>{formatarDataBR(vale.data)}</td>
                           <td>{vale.descricao || '—'}</td>
+                          <td>R$ {parseFloat(vale.valor_original || vale.valor).toFixed(2)}</td>
+                          <td className="valor-descontado-vale">R$ {parseFloat(vale.valor_descontado || 0).toFixed(2)}</td>
                           <td>R$ {parseFloat(vale.valor).toFixed(2)}</td>
                           <td>
                             <input
@@ -344,6 +427,12 @@ function MotoristaDetalhes() {
                               >
                                 🗑
                               </button>
+                              <button
+                                className="btn-visualizar-mini"
+                                onClick={() => setValeHistoricoSelecionado(vale)}
+                              >
+                                VISUALIZAR
+                              </button>
                             </div>
                           </td>
                         </>
@@ -358,6 +447,115 @@ function MotoristaDetalhes() {
           )}
         </div>
       </div>
+
+      {showDescontoValeModal && (
+        <div className="modal-overlay" onClick={() => setShowDescontoValeModal(false)}>
+          <div className="modal-desconto-vale" onClick={(e) => e.stopPropagation()}>
+            <h2>Descontar Vale</h2>
+            <p className="modal-descricao">Motorista: {motorista.nome}</p>
+
+            <div className="form-group">
+              <label>Vale pendente:</label>
+              <select
+                value={descontoValeData.vale_id}
+                onChange={(e) => handleValeDescontoChange(e.target.value)}
+              >
+                <option value="">Selecione</option>
+                {vales.filter((vale) => !vale.pago && Number(vale.valor) > 0).map((vale) => (
+                  <option key={vale.id} value={vale.id}>
+                    {formatarDataBR(vale.data)} - saldo R$ {parseFloat(vale.valor).toFixed(2)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Valor a descontar:</label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={descontoValeData.valor_desconto}
+                onChange={(e) => setDescontoValeData({ ...descontoValeData, valor_desconto: e.target.value })}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Vincular a um acerto (opcional):</label>
+              <select
+                value={descontoValeData.acerto_id}
+                onChange={(e) => setDescontoValeData({ ...descontoValeData, acerto_id: e.target.value })}
+              >
+                <option value="">Não vincular</option>
+                {acertosMotorista.map((acerto) => (
+                  <option key={acerto.id} value={acerto.id}>
+                    {formatarDataBR(acerto.data_inicio)} até {formatarDataBR(acerto.data_fim)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="modal-buttons">
+              <button className="btn-salvar" onClick={handleDescontarVale}>
+                DESCONTAR
+              </button>
+              <button className="btn-cancelar" onClick={() => setShowDescontoValeModal(false)}>
+                CANCELAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {valeHistoricoSelecionado && (
+        <div className="modal-overlay" onClick={() => setValeHistoricoSelecionado(null)}>
+          <div className="modal-historico-vales" onClick={(e) => e.stopPropagation()}>
+            <h2>Descontos do Vale</h2>
+            <p className="modal-descricao">
+              Vale de {formatarDataBR(valeHistoricoSelecionado.data)} - valor original R$ {parseFloat(valeHistoricoSelecionado.valor_original || valeHistoricoSelecionado.valor).toFixed(2)}
+            </p>
+
+            {valeHistoricoSelecionado.descontos?.length > 0 ? (
+              <div className="historico-descontos-table-wrap">
+                <table className="historico-descontos-table">
+                  <thead>
+                    <tr>
+                      <th>Data do desconto</th>
+                      <th>Valor</th>
+                      <th>Saldo antes</th>
+                      <th>Saldo após</th>
+                      <th>Acerto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {valeHistoricoSelecionado.descontos.map((desconto) => (
+                      <tr key={desconto.id}>
+                        <td>{formatarDataHoraBR(desconto.data)}</td>
+                        <td>R$ {parseFloat(desconto.valor).toFixed(2)}</td>
+                        <td>R$ {parseFloat(desconto.saldo_antes).toFixed(2)}</td>
+                        <td>R$ {parseFloat(desconto.saldo_depois).toFixed(2)}</td>
+                        <td>
+                          {desconto.acerto_periodo
+                            ? `${formatarDataBR(desconto.acerto_periodo.data_inicio)} até ${formatarDataBR(desconto.acerto_periodo.data_fim)}`
+                            : "Sem vínculo"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="no-vales">Nenhum desconto registrado para este vale.</p>
+            )}
+
+            <div className="modal-buttons">
+              <button className="btn-cancelar" onClick={() => setValeHistoricoSelecionado(null)}>
+                FECHAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

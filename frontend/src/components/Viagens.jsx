@@ -36,7 +36,15 @@ const formatarCampoCalculado = (valor) => {
   return Number.isFinite(numero) ? numero.toFixed(2) : "";
 };
 
-const formatarMoeda = (valor) => `R$ ${Number(valor || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+const formatarMoeda = (valor) => `R$ ${Number(valor || 0).toLocaleString("pt-BR", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+})}`;
+
+const calcularDescontoCte = (viagem) => {
+  if (!viagem?.teve_cte) return 0;
+  return Number(viagem.peso || 0) * Number(viagem.valor_tonelada || 0) * 0.1;
+};
 
 const getInitialViagemData = () => ({
   id: null,
@@ -88,8 +96,12 @@ const Viagens = () => {
     motorista: "",
     inicio: "",
     fim: "",
-    salvar: false
+    salvar: false,
+    descontar_vales: false,
   });
+  const [valesAcerto, setValesAcerto] = useState([]);
+  const [carregandoValesAcerto, setCarregandoValesAcerto] = useState(false);
+  const [valesSelecionadosAcerto, setValesSelecionadosAcerto] = useState({});
   const [paginaAtual, setPaginaAtual] = useState(1);
 
   // Carregar motoristas
@@ -131,14 +143,16 @@ const Viagens = () => {
   }, []);
 
   // Geração de acerto (PDF)
-  const gerarAcerto = async (motoristaId, inicio, fim, salvar = false) => {
+  const gerarAcerto = async (motoristaId, inicio, fim, salvar = false, descontarVales = false, valesSelecionados = []) => {
     try {
       const res = await api.get("/api/viagens/gerar_acerto/", {
         params: { 
           motorista_id: motoristaId, 
           inicio, 
           fim,
-          salvar: salvar ? "true" : "false"
+          salvar: salvar ? "true" : "false",
+          descontar_vales: descontarVales ? "true" : "false",
+          vales: JSON.stringify(valesSelecionados),
         },
         responseType: "blob",
       });
@@ -218,6 +232,53 @@ const Viagens = () => {
       setResumoAcertoMotorista(null);
     }
   };
+
+  const carregarValesAcerto = async (motoristaId) => {
+    if (!motoristaId) {
+      setValesAcerto([]);
+      setValesSelecionadosAcerto({});
+      return;
+    }
+
+    setCarregandoValesAcerto(true);
+    try {
+      const res = await api.get("/api/vales/", {
+        params: { motorista: motoristaId }
+      });
+      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+      setValesAcerto(data.filter((vale) => !vale.pago && Number(vale.valor || 0) > 0));
+      setValesSelecionadosAcerto({});
+    } catch (err) {
+      console.error("Erro ao carregar vales para acerto:", err);
+      setValesAcerto([]);
+      setValesSelecionadosAcerto({});
+    } finally {
+      setCarregandoValesAcerto(false);
+    }
+  };
+
+  const atualizarValeSelecionado = (vale, selecionado, valor = null) => {
+    setValesSelecionadosAcerto((prev) => {
+      const proximo = { ...prev };
+      if (!selecionado) {
+        delete proximo[vale.id];
+        return proximo;
+      }
+      proximo[vale.id] = {
+        id: vale.id,
+        valor_desconto: valor ?? proximo[vale.id]?.valor_desconto ?? String(vale.valor),
+      };
+      return proximo;
+    });
+  };
+
+  const montarValesSelecionadosAcerto = () => (
+    Object.values(valesSelecionadosAcerto)
+      .map((vale) => ({
+        id: vale.id,
+        valor_desconto: normalizarPayloadDecimal(vale.valor_desconto),
+      }))
+  );
 
 
   // Handlers do modal
@@ -553,6 +614,7 @@ const Viagens = () => {
 
 
   const valorTotalFiltrado = viagensFiltradas.reduce((acc, v) => acc + Number(v.valor_total || 0), 0);
+  const descontoCteFiltrado = viagensFiltradas.reduce((acc, v) => acc + calcularDescontoCte(v), 0);
   const temFiltroAtivo = filtro.motorista || filtro.cliente || filtro.localidade || filtro.pago || filtro.inicio || filtro.fim;
   const totalPaginas = Math.max(1, Math.ceil(viagensFiltradas.length / ITENS_POR_PAGINA));
 
@@ -591,7 +653,10 @@ const Viagens = () => {
           TOTAL DE VIAGENS: {viagensFiltradas.length}
         </p>
         <p className="total-valor">
-          VALOR TOTAL: R$ {valorTotalFiltrado.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+          VALOR TOTAL LÍQUIDO: {formatarMoeda(valorTotalFiltrado)}
+        </p>
+        <p className="total-desconto-cte">
+          DESCONTO CT-e: - {formatarMoeda(descontoCteFiltrado)}
         </p>
       </div>
 
@@ -624,62 +689,68 @@ const Viagens = () => {
         </div>
       )}
 
-      <div className="table-wrapper">
-        <table className="viagens-table">
-          <thead>
-            <tr>
-              <th>DATA</th>
-              <th>ORIGEM</th>
-              <th>DESTINO</th>
-              <th>CLIENTE</th>
-              <th>PESO(TN)</th>
-              <th>VALOR P/TN</th>
-              <th>VALOR</th>
-              <th>CT-E</th>
-              <th>PAGO</th>
-              <th>MOTORISTA</th>
-              <th>AÇÕES</th>
-            </tr>
-          </thead>
-          <tbody>
-            {viagensPaginadas.map(v => (
-              <tr key={v.id}>
-                <td>{formatarDataBR(v.data)}</td>
-                <td>{v.origem}</td>
-                <td>{v.destino}</td>
-                <td>{v.cliente}</td>
-                <td>{v.peso}</td>
-                <td>R$ {Number(v.valor_tonelada).toFixed(2)}</td>
-                <td>R$ {Number(v.valor_total).toFixed(2)}</td>
-                <td>{v.teve_cte ? `Sim${v.numero_cte ? ` - ${v.numero_cte}` : ""}` : "Não"}</td>
-                <td>
-                  <span className={`status-badge ${v.pago ? 'status-pago' : 'status-pendente'}`}>
-                    {v.pago ? "PAGO" : "PENDENTE"}
-                  </span>
-                </td>
-                <td>{motoristas.find(m => m.id === v.motorista)?.nome || "—"}</td>
-                <td>
-                  <div className="acoes-row">
-                    <button
-                      className="btn-remover"
-                      onClick={() => handleRemoverViagem(v.id)}
-                    >
-                      REMOVER
-                    </button>
-
-                    <button
-                      className="btn-editar"
-                      onClick={() => handleEditarViagem(v)}
-                    >
-                      EDITAR
-                    </button>
-                  </div>
-                </td>
-
+      <div className="table-section">
+        <div className="table-wrapper">
+          <table className="viagens-table">
+            <thead>
+              <tr>
+                <th>DATA</th>
+                <th>ORIGEM</th>
+                <th>DESTINO</th>
+                <th>CLIENTE</th>
+                <th>PESO</th>
+                <th>R$/TN</th>
+                <th>LÍQUIDO</th>
+                <th>DESC. CT-E</th>
+                <th>CT-E</th>
+                <th>PAGO</th>
+                <th>MOTORISTA</th>
+                <th>AÇÕES</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {viagensPaginadas.map(v => (
+                <tr key={v.id}>
+                  <td className="nowrap-cell">{formatarDataBR(v.data)}</td>
+                  <td>{v.origem}</td>
+                  <td>{v.destino}</td>
+                  <td>{v.cliente}</td>
+                  <td className="numeric-cell">{v.peso}</td>
+                  <td className="numeric-cell">R$ {Number(v.valor_tonelada).toFixed(2)}</td>
+                  <td className="numeric-cell">R$ {Number(v.valor_total).toFixed(2)}</td>
+                  <td className={`numeric-cell ${v.teve_cte ? "valor-desconto-cte" : ""}`}>
+                    {v.teve_cte ? `- R$ ${calcularDescontoCte(v).toFixed(2)}` : "R$ 0.00"}
+                  </td>
+                  <td className="nowrap-cell">{v.teve_cte ? `Sim${v.numero_cte ? ` - ${v.numero_cte}` : ""}` : "Não"}</td>
+                  <td className="status-cell">
+                    <span className={`status-badge ${v.pago ? 'status-pago' : 'status-pendente'}`}>
+                      {v.pago ? "PAGO" : "PENDENTE"}
+                    </span>
+                  </td>
+                  <td>{motoristas.find(m => m.id === v.motorista)?.nome || "—"}</td>
+                  <td className="actions-cell">
+                    <div className="acoes-row">
+                      <button
+                        className="btn-remover"
+                        onClick={() => handleRemoverViagem(v.id)}
+                      >
+                        REMOVER
+                      </button>
+
+                      <button
+                        className="btn-editar"
+                        onClick={() => handleEditarViagem(v)}
+                      >
+                        EDITAR
+                      </button>
+                    </div>
+                  </td>
+
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <PaginationControls
           totalItems={viagensFiltradas.length}
           itemsPerPage={ITENS_POR_PAGINA}
@@ -1082,6 +1153,8 @@ const Viagens = () => {
           onClick={() => {
             setShowAcertoModal(false);
             setResumoAcertoMotorista(null);
+            setValesAcerto([]);
+            setValesSelecionadosAcerto({});
           }}
         >
           <div className="modal-edicao" onClick={(e) => e.stopPropagation()}>
@@ -1093,8 +1166,9 @@ const Viagens = () => {
                 value={acertoData.motorista}
                 onChange={async (e) => {
                   const motoristaSelecionado = e.target.value;
-                  setAcertoData((prev) => ({ ...prev, motorista: motoristaSelecionado }));
+                  setAcertoData((prev) => ({ ...prev, motorista: motoristaSelecionado, descontar_vales: false }));
                   await carregarResumoAcertoMotorista(motoristaSelecionado);
+                  await carregarValesAcerto(motoristaSelecionado);
                 }}
               >
                 <option value="">Selecione</option>
@@ -1145,6 +1219,58 @@ const Viagens = () => {
               <label htmlFor="salvar-acerto">Salvar no histórico de acertos</label>
             </div>
 
+            <div className="form-group-checkbox">
+              <input
+                type="checkbox"
+                id="descontar-vales"
+                checked={acertoData.descontar_vales}
+                disabled={!acertoData.motorista}
+                onChange={e => setAcertoData({ ...acertoData, descontar_vales: e.target.checked })}
+              />
+              <label htmlFor="descontar-vales">Descontar vales neste acerto</label>
+            </div>
+
+            {acertoData.descontar_vales && (
+              <div className="vales-acerto-box">
+                <h3>Vales pendentes do motorista</h3>
+                {carregandoValesAcerto ? (
+                  <p className="form-help-text">Carregando vales...</p>
+                ) : valesAcerto.length > 0 ? (
+                  <div className="vales-acerto-list">
+                    {valesAcerto.map((vale) => {
+                      const selecionado = Boolean(valesSelecionadosAcerto[vale.id]);
+                      const valorSelecionado = valesSelecionadosAcerto[vale.id]?.valor_desconto ?? String(vale.valor);
+                      return (
+                        <div className="vale-acerto-item" key={vale.id}>
+                          <label className="vale-acerto-check">
+                            <input
+                              type="checkbox"
+                              checked={selecionado}
+                              onChange={(e) => atualizarValeSelecionado(vale, e.target.checked)}
+                            />
+                            <span>
+                              {formatarDataBR(vale.data)} - Saldo: {formatarMoeda(vale.valor)}
+                            </span>
+                          </label>
+                          <input
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            max={vale.valor}
+                            value={valorSelecionado}
+                            disabled={!selecionado}
+                            onChange={(e) => atualizarValeSelecionado(vale, true, e.target.value)}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="form-help-text">Nenhum vale pendente para este motorista.</p>
+                )}
+              </div>
+            )}
+
             <div className="modal-buttons">
               <button
                 className="btn-salvar"
@@ -1153,10 +1279,32 @@ const Viagens = () => {
                     alert("Selecione motorista e período!");
                     return;
                   }
-                  gerarAcerto(acertoData.motorista, acertoData.inicio, acertoData.fim, acertoData.salvar);
+                  const valesSelecionados = acertoData.descontar_vales ? montarValesSelecionadosAcerto() : [];
+                  if (acertoData.descontar_vales && valesSelecionados.length === 0) {
+                    alert("Selecione ao menos um vale para desconto.");
+                    return;
+                  }
+                  for (const valeSelecionado of valesSelecionados) {
+                    const vale = valesAcerto.find((item) => item.id === valeSelecionado.id);
+                    const valorDesconto = parseDecimalInput(valeSelecionado.valor_desconto);
+                    if (!vale || !valorDesconto || valorDesconto <= 0 || valorDesconto > Number(vale.valor)) {
+                      alert("Confira os valores de desconto dos vales selecionados.");
+                      return;
+                    }
+                  }
+                  gerarAcerto(
+                    acertoData.motorista,
+                    acertoData.inicio,
+                    acertoData.fim,
+                    acertoData.salvar,
+                    acertoData.descontar_vales,
+                    valesSelecionados
+                  );
                   setShowAcertoModal(false);
-                  setAcertoData({ motorista: "", inicio: "", fim: "", salvar: false });
+                  setAcertoData({ motorista: "", inicio: "", fim: "", salvar: false, descontar_vales: false });
                   setResumoAcertoMotorista(null);
+                  setValesAcerto([]);
+                  setValesSelecionadosAcerto({});
                 }}
               >
                 GERAR PDF
@@ -1166,6 +1314,8 @@ const Viagens = () => {
                 onClick={() => {
                   setShowAcertoModal(false);
                   setResumoAcertoMotorista(null);
+                  setValesAcerto([]);
+                  setValesSelecionadosAcerto({});
                 }}
               >
                 CANCELAR

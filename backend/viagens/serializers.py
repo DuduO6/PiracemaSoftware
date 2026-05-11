@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from rest_framework import serializers
 from .models import Viagem
@@ -27,9 +27,13 @@ class ViagemSerializer(serializers.ModelSerializer):
     def _get_valor_total(self, attrs):
         peso = attrs.get("peso", getattr(self.instance, "peso", None))
         valor_tonelada = attrs.get("valor_tonelada", getattr(self.instance, "valor_tonelada", None))
+        teve_cte = attrs.get("teve_cte", getattr(self.instance, "teve_cte", False))
         if peso is None or valor_tonelada is None:
             return None
-        return peso * valor_tonelada
+        valor_total = peso * valor_tonelada
+        if teve_cte:
+            valor_total *= Decimal("0.90")
+        return valor_total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     def _get_duplicate_queryset(self, attrs):
         request = self.context.get("request")

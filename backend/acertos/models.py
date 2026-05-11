@@ -38,6 +38,11 @@ class Acerto(models.Model):
     
     total_viagens = models.IntegerField()
     valor_total_viagens = models.DecimalField(max_digits=10, decimal_places=2)
+    total_viagens_com_cte = models.IntegerField(default=0)
+    valor_total_viagens_com_cte = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    total_viagens_sem_cte = models.IntegerField(default=0)
+    valor_total_viagens_sem_cte = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    desconto_cte = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     total_vales = models.DecimalField(max_digits=10, decimal_places=2)
     comissao = models.DecimalField(max_digits=10, decimal_places=2)
     valor_a_receber = models.DecimalField(max_digits=10, decimal_places=2)
@@ -74,6 +79,8 @@ class ItemAcerto(models.Model):
     peso = models.DecimalField(max_digits=10, decimal_places=2)
     valor_tonelada = models.DecimalField(max_digits=10, decimal_places=2)
     valor_total = models.DecimalField(max_digits=10, decimal_places=2)
+    teve_cte = models.BooleanField(default=False)
+    valor_desconto_cte = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     pago = models.BooleanField()
 
     def __str__(self):
@@ -87,7 +94,10 @@ class ValeAcerto(models.Model):
     
     # Duplicamos os dados do vale
     data = models.DateField()
+    valor_original = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     valor = models.DecimalField(max_digits=10, decimal_places=2)
+    valor_restante = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
+    quitado = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Vale {self.data} - R$ {self.valor}"

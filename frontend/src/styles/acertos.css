@@ -153,45 +153,46 @@
   padding: 20px;
   border-radius: 6px;
   margin-top: 20px;
+  overflow-x: auto;
 }
 
-.resumo-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid #000000;
-  font-size: 15px;
+.resumo-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  color: #222;
+  font-size: 14px;
 }
 
-.resumo-item:last-child {
-  border-bottom: none;
+.resumo-table th,
+.resumo-table td {
+  border: 1px solid #d0d0d0;
+  padding: 10px 12px;
+  text-align: left;
 }
 
-.resumo-item.destaque {
-  background-color: #2e2e2e;
-  color: rgb(71, 71, 71);
-  padding: 15px;
-  margin-top: 10px;
-  border-radius: 4px;
-  font-size: 16px;
+.resumo-table th {
+  background: #eeeeee;
+  color: #222;
   font-weight: bold;
 }
 
-.resumo-item span {
-  color: #555;
+.resumo-table td:nth-child(2),
+.resumo-table td:nth-child(3),
+.resumo-table th:nth-child(2),
+.resumo-table th:nth-child(3) {
+  text-align: right;
 }
 
-.resumo-item.destaque span {
-  color: #ecf0f1;
+.resumo-table .resumo-desconto td {
+  color: #c0392b;
+  font-weight: 700;
 }
 
-.resumo-item strong {
-  color: #2c3e50;
-  font-weight: bold;
-}
-
-.resumo-item.destaque strong {
-  color: white;
+.resumo-table .resumo-valor-pagar td {
+  background: #e6f6ea;
+  color: #137333;
+  font-weight: 800;
 }
 
 /* Responsivo */

@@ -1,6 +1,11 @@
 from django.db import models
 from django.conf import settings  # Importar settings
 from motoristas.models import Motorista, Vale
+from decimal import Decimal, ROUND_HALF_UP
+
+
+CASAS_DECIMAIS = Decimal("0.01")
+DESCONTO_CTE = Decimal("0.90")
 
 class Viagem(models.Model):
     usuario = models.ForeignKey(
@@ -19,8 +24,14 @@ class Viagem(models.Model):
     valor_total = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
     pago = models.BooleanField(default=False)
 
+    def calcular_valor_total(self):
+        valor = self.peso * self.valor_tonelada
+        if self.teve_cte:
+            valor *= DESCONTO_CTE
+        return valor.quantize(CASAS_DECIMAIS, rounding=ROUND_HALF_UP)
+
     def save(self, *args, **kwargs):
-        self.valor_total = self.peso * self.valor_tonelada
+        self.valor_total = self.calcular_valor_total()
         super().save(*args, **kwargs)
 
     def __str__(self):

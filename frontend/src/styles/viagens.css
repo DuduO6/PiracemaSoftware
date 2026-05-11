@@ -5,6 +5,9 @@
   padding: 40px;
   color: white;
   font-family: "Montserrat", sans-serif;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* Título */
@@ -51,10 +54,19 @@
 }
 
 .total-valor {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 800;
   margin: 0;
   color: #4caf50;
+  line-height: 1.2;
+}
+
+.total-desconto-cte {
+  font-size: 17px;
+  font-weight: 800;
+  margin: 8px 0 0 0;
+  color: #ff6b5f;
+  line-height: 1.2;
 }
 
 /* Filtros Aplicados */
@@ -86,37 +98,122 @@
   background: #d32f2f;
 }
 
-/* Tabela */
-.table-wrapper {
-  overflow-x: auto;
+.table-section {
   background: #1a1a1a;
   border-radius: 20px;
   padding: 20px;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Tabela */
+.table-wrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  scrollbar-gutter: stable;
 }
 
 .viagens-table {
+  min-width: 1280px;
   width: 100%;
   border-collapse: collapse;
   background: transparent;
+  table-layout: auto;
 }
 
 .viagens-table th {
   background: #2a2a2a;
-  padding: 16px;
-  font-size: 14px;
+  padding: 12px 10px;
+  font-size: 12px;
   font-weight: 700;
   text-align: left;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: #cccccc;
   border-bottom: 3px solid #444444;
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: nowrap;
 }
 
 .viagens-table td {
-  padding: 18px 16px;
+  padding: 14px 10px;
   border-bottom: 1px solid #333333;
-  font-size: 15px;
+  font-size: 13px;
   color: #ffffff;
+  overflow-wrap: break-word;
+  vertical-align: middle;
+}
+
+.viagens-table th:nth-child(1),
+.viagens-table td:nth-child(1) {
+  width: 96px;
+}
+
+.viagens-table th:nth-child(2),
+.viagens-table td:nth-child(2),
+.viagens-table th:nth-child(3),
+.viagens-table td:nth-child(3) {
+  width: 130px;
+}
+
+.viagens-table th:nth-child(4),
+.viagens-table td:nth-child(4) {
+  width: 155px;
+}
+
+.viagens-table th:nth-child(5),
+.viagens-table td:nth-child(5) {
+  width: 76px;
+}
+
+.viagens-table th:nth-child(6),
+.viagens-table td:nth-child(6),
+.viagens-table th:nth-child(7),
+.viagens-table td:nth-child(7),
+.viagens-table th:nth-child(8),
+.viagens-table td:nth-child(8) {
+  width: 104px;
+}
+
+.viagens-table th:nth-child(9),
+.viagens-table td:nth-child(9) {
+  width: 98px;
+}
+
+.viagens-table th:nth-child(10),
+.viagens-table td:nth-child(10) {
+  width: 108px;
+}
+
+.viagens-table th:nth-child(11),
+.viagens-table td:nth-child(11) {
+  width: 145px;
+}
+
+.viagens-table th:nth-child(12),
+.viagens-table td:nth-child(12) {
+  width: 166px;
+}
+
+.nowrap-cell,
+.numeric-cell {
+  white-space: nowrap;
+}
+
+.numeric-cell {
+  text-align: right;
+}
+
+.status-cell,
+.actions-cell {
+  white-space: nowrap;
+}
+
+.valor-desconto-cte {
+  color: #ff6b5f;
+  font-weight: 700;
 }
 
 .viagens-table tbody tr {
@@ -131,13 +228,16 @@
 .btn-editar {
   background: white;
   color: black;
-  padding: 8px 20px;
+  padding: 7px 12px;
   border-radius: 20px;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   border: none;
   cursor: pointer;
   transition: 0.2s;
+  min-width: 74px;
+  white-space: nowrap;
+  line-height: 1.1;
 }
 
 .btn-editar:hover {
@@ -148,13 +248,16 @@
 .btn-remover {
   background: rgb(255, 0, 0);
   color: rgb(255, 255, 255);
-  padding: 8px 10px;
+  padding: 7px 12px;
   border-radius: 20px;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   border: none;
   cursor: pointer;
   transition: 0.2s;
+  min-width: 82px;
+  white-space: nowrap;
+  line-height: 1.1;
 }
 
 .btn-remover:hover {
@@ -164,12 +267,15 @@
 
 /* Status Badge */
 .status-badge {
-  padding: 6px 14px;
+  padding: 6px 10px;
   border-radius: 16px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   display: inline-block;
+  min-width: 80px;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .status-pago {
@@ -184,8 +290,10 @@
 
 .acoes-row {
   display: flex;
-  gap: 5px;              /* espaço entre os botões */
-  justify-content: center; /* opcional */
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 6px;
+  justify-content: flex-start;
   align-items: center;
 }
 
@@ -369,6 +477,55 @@
   cursor: pointer;
 }
 
+.vales-acerto-box {
+  background: #0a0a0a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.vales-acerto-box h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+}
+
+.vales-acerto-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.vale-acerto-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px;
+  gap: 12px;
+  align-items: center;
+  background: #151515;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.vale-acerto-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.vale-acerto-check span {
+  overflow-wrap: anywhere;
+}
+
+.vale-acerto-item input[type="number"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .preview-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -473,7 +630,7 @@
     width: 100%;
   }
 
-  .table-wrapper {
+  .table-section {
     padding: 12px;
   }
 
