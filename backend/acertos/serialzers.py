@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Acerto, ItemAcerto, ValeAcerto
+from motoristas.models import Vale
 
 
 class ItemAcertoSerializer(serializers.ModelSerializer):
@@ -21,10 +22,17 @@ class ValeAcertoSerializer(serializers.ModelSerializer):
         fields = ['id', 'data', 'valor_original', 'valor', 'valor_restante', 'quitado']
 
 
+class ValeAtivoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Vale
+        fields = ['id', 'data', 'valor_original', 'valor', 'valor_descontado', 'pago']
+
+
 class AcertoSerializer(serializers.ModelSerializer):
     motorista_nome = serializers.CharField(source='motorista.nome', read_only=True)
     regra_aplicada_nome = serializers.CharField(source='regra_aplicada.nome', read_only=True)
     valor_bruto_viagens_com_cte = serializers.SerializerMethodField()
+    vales_ativos = serializers.SerializerMethodField()
     itens = ItemAcertoSerializer(many=True, read_only=True)
     vales = ValeAcertoSerializer(many=True, read_only=True)
 
@@ -39,11 +47,19 @@ class AcertoSerializer(serializers.ModelSerializer):
                   'total_vales', 'comissao', 'percentual_comissao', 'desconto_fixo',
                   'desconto_vales', 'valor_a_receber', 'observacoes', 'regra_aplicada',
                   'regra_aplicada_nome',
-                  'itens', 'vales']
+                  'itens', 'vales', 'vales_ativos']
         read_only_fields = ['usuario', 'data_geracao']
 
     def get_valor_bruto_viagens_com_cte(self, obj):
         return obj.valor_total_viagens_com_cte + (obj.desconto_cte or 0)
+
+    def get_vales_ativos(self, obj):
+        vales = Vale.objects.filter(
+            motorista=obj.motorista,
+            pago=False,
+            valor__gt=0,
+        ).order_by('data', 'id')
+        return ValeAtivoSerializer(vales, many=True).data
 
 
 class AcertoListSerializer(serializers.ModelSerializer):

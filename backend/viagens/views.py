@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from datetime import datetime, timedelta
 import csv
 import json
+import re
 from io import BytesIO
 from django.db.models import Q
 from django.db import transaction
@@ -244,6 +245,7 @@ class ViagemViewSet(viewsets.ModelViewSet):
         salvar = request.query_params.get('salvar', 'false').lower() == 'true'
         descontar_vales = get_bool_param(request.query_params, "descontar_vales")
         vales_payload_raw = request.query_params.get("vales", "[]")
+        nome_arquivo = (request.query_params.get("nome_arquivo") or "").strip()
 
         if not motorista_id or not inicio or not fim:
             return Response(
@@ -452,6 +454,14 @@ class ViagemViewSet(viewsets.ModelViewSet):
                         saldo_depois=item["valor_restante"],
                     )
 
+        vales_ativos = list(
+            Vale.objects.filter(
+                motorista=motorista,
+                pago=False,
+                valor__gt=0,
+            ).order_by("data", "id")
+        )
+
         # GERAR PDF
         buffer = BytesIO()
         page_size = landscape(A4)
@@ -478,6 +488,7 @@ class ViagemViewSet(viewsets.ModelViewSet):
             "TabelaAcertoCabecalho",
             parent=table_cell_style,
             fontName="Helvetica-Bold",
+            fontSize=6,
         )
         elementos = []
 
@@ -507,20 +518,12 @@ class ViagemViewSet(viewsets.ModelViewSet):
             text = f"Página {page_num}"
             canvas_obj.drawRightString(page_w - doc_obj.rightMargin, 20, text)
 
-        titulo = Paragraph(
-            f"<b>ACERTO DE FRETES</b><br/><b>Motorista:</b> {motorista.nome}",
-            styles["Title"]
-        )
+        titulo = Paragraph("<b>ACERTO DE FRETES</b>", styles["Title"])
         elementos.append(titulo)
         elementos.append(Spacer(1, 12))
 
         info = Paragraph(
-            f"<b>Período:</b> {inicio_efetivo.strftime('%Y-%m-%d')} até {fim}<br/>"
-            f"<b>Total de viagens:</b> {total_viagens}<br/>"
-            f"<b>Viagens com CT-e:</b> {total_viagens_com_cte} - bruto R$ {valor_bruto_viagens_com_cte} | líquido R$ {valor_total_viagens_com_cte}<br/>"
-            f"<b>Viagens sem CT-e:</b> {total_viagens_sem_cte} - R$ {valor_total_viagens_sem_cte}<br/>"
-            f"<b>Desconto CT-e ({PERCENTUAL_DESCONTO_CTE}%):</b> R$ {desconto_cte}<br/>"
-            f"<b>Comissão:</b> {percentual_comissao}%",
+            f"<b>Período:</b> {inicio_efetivo.strftime('%d/%m/%Y')} até {fim_date.strftime('%d/%m/%Y')}",
             styles["Heading3"]
         )
         elementos.append(info)
@@ -533,7 +536,7 @@ class ViagemViewSet(viewsets.ModelViewSet):
             Paragraph("CLIENTE", table_header_style),
             Paragraph("PESO(TN)", table_header_style),
             Paragraph("VALOR P/TN", table_header_style),
-            Paragraph("VALOR BRUTO", table_header_style),
+            Paragraph("VALOR&nbsp;BRUTO", table_header_style),
             Paragraph("DESC. CT-E", table_header_style),
             Paragraph("VALOR LIQ.", table_header_style),
             Paragraph("CT-E", table_header_style),
@@ -555,7 +558,7 @@ class ViagemViewSet(viewsets.ModelViewSet):
                 Paragraph("SIM" if v.pago else "NÃO", table_cell_style),
             ])
 
-        col_widths = [1.9*cm, 3.8*cm, 3.8*cm, 4.1*cm, 1.6*cm, 2*cm, 2*cm, 2*cm, 2*cm, 1.3*cm, 1.3*cm]
+        col_widths = [1.9*cm, 3.8*cm, 3.8*cm, 3.8*cm, 1.6*cm, 2*cm, 2.3*cm, 2*cm, 2*cm, 1.3*cm, 1.3*cm]
         
         tabela = Table(tabela_dados, colWidths=col_widths, repeatRows=1)
         tabela.setStyle(TableStyle([
@@ -602,8 +605,71 @@ class ViagemViewSet(viewsets.ModelViewSet):
             ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.Color(0.95, 0.95, 0.95)]),
         ]))
         elementos.append(tabela2)
+        elementos.append(Spacer(1, 20))
+
+        elementos.append(Paragraph("<b>Vales ativos do motorista</b>", styles["Heading2"]))
+        tabela_vales_ativos = [[
+            Paragraph("DATA", table_header_style),
+            Paragraph("VALOR ORIGINAL", table_header_style),
+            Paragraph("SALDO ATUAL", table_header_style),
+            Paragraph("DESCONTADO", table_header_style),
+            Paragraph("SITUAÇÃO", table_header_style),
+        ]]
+        if vales_ativos:
+            for vale in vales_ativos:
+                tabela_vales_ativos.append([
+                    Paragraph(vale.data.strftime("%d/%m/%Y"), table_cell_style),
+                    Paragraph(f"R$ {vale.valor_original}", table_cell_style),
+                    Paragraph(f"R$ {vale.valor}", table_cell_style),
+                    Paragraph(f"R$ {vale.valor_descontado}", table_cell_style),
+                    Paragraph("ATIVO", table_cell_style),
+                ])
+        else:
+            tabela_vales_ativos.append([
+                Paragraph("-", table_cell_style),
+                Paragraph("R$ 0.00", table_cell_style),
+                Paragraph("R$ 0.00", table_cell_style),
+                Paragraph("R$ 0.00", table_cell_style),
+                Paragraph("NENHUM VALE ATIVO", table_cell_style),
+            ])
+
+        tabela_vales_ativos_pdf = Table(
+            tabela_vales_ativos,
+            colWidths=[3.5*cm, 4*cm, 4*cm, 4*cm, 5.5*cm],
+            repeatRows=1,
+        )
+        tabela_vales_ativos_pdf.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.lightgrey),
+            ("GRID", (0,0), (-1,-1), 0.8, colors.black),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+            ("ALIGN", (0,0), (-1,-1), "CENTER"),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [colors.white, colors.Color(0.95, 0.95, 0.95)]),
+        ]))
+        elementos.append(tabela_vales_ativos_pdf)
 
         elementos.append(PageBreak())
+
+        elementos.append(Paragraph("<b>Informações do acerto</b>", styles["Heading2"]))
+        info_acerto_dados = [
+            ["Motorista", motorista.nome],
+            ["Período", f"{inicio_efetivo.strftime('%d/%m/%Y')} até {fim_date.strftime('%d/%m/%Y')}"],
+            ["Data de geração", datetime.now().strftime("%d/%m/%Y %H:%M")],
+            ["Regra aplicada", regra_acerto.nome if regra_acerto else "Padrão"],
+            ["Percentual de comissão", f"{percentual_comissao}%"],
+        ]
+        tabela_info_acerto = Table(info_acerto_dados, colWidths=[7*cm, 15*cm])
+        tabela_info_acerto.setStyle(TableStyle([
+            ("BACKGROUND", (0,0), (0,-1), colors.lightgrey),
+            ("FONTNAME", (0,0), (0,-1), "Helvetica-Bold"),
+            ("GRID", (0,0), (-1,-1), 0.8, colors.black),
+            ("FONTSIZE", (0,0), (-1,-1), 9),
+            ("LEFTPADDING", (0,0), (-1,-1), 6),
+            ("RIGHTPADDING", (0,0), (-1,-1), 6),
+            ("TOPPADDING", (0,0), (-1,-1), 5),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+        ]))
+        elementos.append(tabela_info_acerto)
+        elementos.append(Spacer(1, 20))
 
         elementos.append(Paragraph("<b>Resumo do acerto</b>", styles["Heading2"]))
         resumo_dados = [
@@ -641,7 +707,13 @@ class ViagemViewSet(viewsets.ModelViewSet):
 
         buffer.seek(0)
         response = HttpResponse(buffer, content_type="application/pdf")
+        if not nome_arquivo:
+            nome_arquivo = f"{fim_date.strftime('%Y-%m-%d')}_{motorista.nome}"
+        nome_arquivo = re.sub(r"[^A-Za-z0-9._ -]+", "", nome_arquivo).strip()
+        nome_arquivo = re.sub(r"\s+", "_", nome_arquivo) or f"{fim_date.strftime('%Y-%m-%d')}_{motorista.id}"
+        if not nome_arquivo.lower().endswith(".pdf"):
+            nome_arquivo = f"{nome_arquivo}.pdf"
         response["Content-Disposition"] = (
-            f'attachment; filename="acerto_fretes_{motorista.nome}_{inicio}_{fim}.pdf"'
+            f'attachment; filename="{nome_arquivo}"'
         )
         return response

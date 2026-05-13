@@ -13,6 +13,7 @@ const Acertos = () => {
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [paginaItensModal, setPaginaItensModal] = useState(1);
   const [paginaValesModal, setPaginaValesModal] = useState(1);
+  const [paginaValesAtivosModal, setPaginaValesAtivosModal] = useState(1);
 
   useEffect(() => {
     carregarAcertos();
@@ -33,6 +34,7 @@ const Acertos = () => {
         setAcertoSelecionado(res.data);
         setPaginaItensModal(1);
         setPaginaValesModal(1);
+        setPaginaValesAtivosModal(1);
         setShowModal(true);
       })
       .catch((err) => console.error("Erro ao carregar detalhes:", err));
@@ -43,6 +45,7 @@ const Acertos = () => {
     setAcertoSelecionado(null);
     setPaginaItensModal(1);
     setPaginaValesModal(1);
+    setPaginaValesAtivosModal(1);
   };
 
   const formatarData = (dataStr) => {
@@ -69,6 +72,7 @@ const Acertos = () => {
 
   const itensModal = acertoSelecionado?.itens || [];
   const valesModal = acertoSelecionado?.vales || [];
+  const valesAtivosModal = acertoSelecionado?.vales_ativos || [];
   const itensPaginados = itensModal.slice(
     (paginaItensModal - 1) * ITENS_MODAL_POR_PAGINA,
     paginaItensModal * ITENS_MODAL_POR_PAGINA
@@ -76,6 +80,10 @@ const Acertos = () => {
   const valesPaginados = valesModal.slice(
     (paginaValesModal - 1) * ITENS_MODAL_POR_PAGINA,
     paginaValesModal * ITENS_MODAL_POR_PAGINA
+  );
+  const valesAtivosPaginados = valesAtivosModal.slice(
+    (paginaValesAtivosModal - 1) * ITENS_MODAL_POR_PAGINA,
+    paginaValesAtivosModal * ITENS_MODAL_POR_PAGINA
   );
   const calcularValorBrutoCte = (acerto) => {
     if (acerto?.valor_bruto_viagens_com_cte !== undefined && acerto?.valor_bruto_viagens_com_cte !== null) {
@@ -146,13 +154,7 @@ const Acertos = () => {
 
             <div className="acerto-info-box">
               <div className="info-row">
-                <strong>Motorista:</strong> {acertoSelecionado.motorista_nome}
-              </div>
-              <div className="info-row">
                 <strong>Período:</strong> {formatarData(acertoSelecionado.data_inicio)} até {formatarData(acertoSelecionado.data_fim)}
-              </div>
-              <div className="info-row">
-                <strong>Data de Geração:</strong> {formatarDataHora(acertoSelecionado.data_geracao)}
               </div>
             </div>
 
@@ -246,6 +248,46 @@ const Acertos = () => {
               </div>
             </div>
 
+            <div className="acerto-section">
+              <h3>Vales ativos do motorista ({valesAtivosModal.length})</h3>
+              <div className="table-wrapper-modal">
+                <table className="tabela-modal">
+                  <thead>
+                    <tr>
+                      <th>DATA</th>
+                      <th>VALOR ORIGINAL</th>
+                      <th>SALDO ATUAL</th>
+                      <th>DESCONTADO</th>
+                      <th>SITUAÇÃO</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {valesAtivosPaginados.length > 0 ? (
+                      valesAtivosPaginados.map((vale) => (
+                        <tr key={vale.id}>
+                          <td>{formatarData(vale.data)}</td>
+                          <td>R$ {Number(vale.valor_original || 0).toFixed(2)}</td>
+                          <td>R$ {Number(vale.valor || 0).toFixed(2)}</td>
+                          <td>R$ {Number(vale.valor_descontado || 0).toFixed(2)}</td>
+                          <td>ATIVO</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="tabela-vazia">Nenhum vale ativo para este motorista.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                <PaginationControls
+                  totalItems={valesAtivosModal.length}
+                  itemsPerPage={ITENS_MODAL_POR_PAGINA}
+                  currentPage={paginaValesAtivosModal}
+                  onPageChange={setPaginaValesAtivosModal}
+                />
+              </div>
+            </div>
+
             <div className="acerto-resumo">
               <table className="resumo-table">
                 <thead>
@@ -281,6 +323,14 @@ const Acertos = () => {
                     <td>{acertoSelecionado.total_viagens_sem_cte || 0}</td>
                     <td>R$ {Number(acertoSelecionado.valor_total_viagens_sem_cte || 0).toFixed(2)}</td>
                   </tr>
+                  <tr className="resumo-total-liquido">
+                    <td>Valor Total (com CT-e + sem CT-e)</td>
+                    <td>{acertoSelecionado.total_viagens}</td>
+                    <td>R$ {(
+                      Number(acertoSelecionado.valor_total_viagens_com_cte || 0) +
+                      Number(acertoSelecionado.valor_total_viagens_sem_cte || 0)
+                    ).toFixed(2)}</td>
+                  </tr>
                   <tr>
                     <td>Saldo dos Vales Selecionados</td>
                     <td>-</td>
@@ -303,6 +353,20 @@ const Acertos = () => {
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <div className="acerto-info-box acerto-info-box-bottom">
+              <div className="info-row">
+                <strong>Motorista:</strong> {acertoSelecionado.motorista_nome}
+              </div>
+              <div className="info-row">
+                <strong>Data de Geração:</strong> {formatarDataHora(acertoSelecionado.data_geracao)}
+              </div>
+              {acertoSelecionado.regra_aplicada_nome && (
+                <div className="info-row">
+                  <strong>Regra aplicada:</strong> {acertoSelecionado.regra_aplicada_nome}
+                </div>
+              )}
             </div>
 
             <div className="modal-buttons">

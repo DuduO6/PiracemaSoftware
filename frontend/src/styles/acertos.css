@@ -94,6 +94,10 @@
   margin-bottom: 25px;
 }
 
+.acerto-info-box-bottom {
+  margin-top: 20px;
+}
+
 .info-row {
   padding: 8px 0;
   font-size: 14px;
@@ -138,6 +142,10 @@
   padding: 10px;
   text-align: left;
   border: 1px solid #ffffff;
+}
+
+.tabela-modal th {
+  white-space: nowrap;
 }
 
 .tabela-modal tbody tr:nth-child(even) {
@@ -193,6 +201,11 @@
 .resumo-table .resumo-desconto td {
   color: #c0392b;
   font-weight: 700;
+}
+
+.resumo-table .resumo-total-liquido td {
+  background: #f3f7fb;
+  font-weight: 800;
 }
 
 .resumo-table .resumo-valor-pagar td {

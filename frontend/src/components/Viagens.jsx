@@ -41,6 +41,15 @@ const formatarMoeda = (valor) => `R$ ${Number(valor || 0).toLocaleString("pt-BR"
   maximumFractionDigits: 2,
 })}`;
 
+const sanitizarNomeArquivo = (valor) => {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9._ -]/g, "")
+    .trim()
+    .replace(/\s+/g, "_");
+};
+
 const calcularDescontoCte = (viagem) => {
   if (!viagem?.teve_cte) return 0;
   return Number(viagem.valor_desconto_cte ?? (Number(viagem.peso || 0) * Number(viagem.valor_tonelada || 0) * 0.1));
@@ -100,6 +109,7 @@ const Viagens = () => {
     motorista: "",
     inicio: "",
     fim: "",
+    nome_arquivo: "",
     salvar: false,
     descontar_vales: false,
   });
@@ -147,8 +157,13 @@ const Viagens = () => {
   }, []);
 
   // Geração de acerto (PDF)
-  const gerarAcerto = async (motoristaId, inicio, fim, salvar = false, descontarVales = false, valesSelecionados = []) => {
+  const gerarAcerto = async (motoristaId, inicio, fim, salvar = false, descontarVales = false, valesSelecionados = [], nomeArquivo = "") => {
     try {
+      const motorista = motoristas.find((item) => String(item.id) === String(motoristaId));
+      const nomeMotorista = motorista?.nome || `Motorista_${motoristaId}`;
+      const nomeBase = sanitizarNomeArquivo(nomeArquivo) || sanitizarNomeArquivo(`${fim}_${nomeMotorista}`);
+      const nomePdf = nomeBase.toLowerCase().endsWith(".pdf") ? nomeBase : `${nomeBase}.pdf`;
+
       const res = await api.get("/api/viagens/gerar_acerto/", {
         params: { 
           motorista_id: motoristaId, 
@@ -157,6 +172,7 @@ const Viagens = () => {
           salvar: salvar ? "true" : "false",
           descontar_vales: descontarVales ? "true" : "false",
           vales: JSON.stringify(valesSelecionados),
+          nome_arquivo: nomeBase,
         },
         responseType: "blob",
       });
@@ -166,7 +182,7 @@ const Viagens = () => {
 
       const link = document.createElement("a");
       link.href = url;
-      link.download = `Acerto_${motoristaId}.pdf`;
+      link.download = nomePdf;
 
       // 🔥 ESSENCIAL PARA O ELECTRON
       document.body.appendChild(link);
@@ -1185,6 +1201,7 @@ const Viagens = () => {
           className="modal-overlay"
           onClick={() => {
             setShowAcertoModal(false);
+            setAcertoData({ motorista: "", inicio: "", fim: "", nome_arquivo: "", salvar: false, descontar_vales: false });
             setResumoAcertoMotorista(null);
             setValesAcerto([]);
             setValesSelecionadosAcerto({});
@@ -1192,6 +1209,16 @@ const Viagens = () => {
         >
           <div className="modal-edicao" onClick={(e) => e.stopPropagation()}>
             <h2>Gerar Acerto</h2>
+
+            <div className="form-group">
+              <label>Nome do arquivo PDF (opcional):</label>
+              <input
+                type="text"
+                value={acertoData.nome_arquivo}
+                placeholder="Ex.: Acerto Maio Carlos"
+                onChange={e => setAcertoData({ ...acertoData, nome_arquivo: e.target.value })}
+              />
+            </div>
 
             <div className="form-group">
               <label>Motorista:</label>
@@ -1325,16 +1352,21 @@ const Viagens = () => {
                       return;
                     }
                   }
+                  const nomeArquivoInformado = acertoData.nome_arquivo.trim();
+                  const nomeArquivo = nomeArquivoInformado || (window.prompt(
+                    "Nome do arquivo PDF (opcional). Se deixar em branco, será usada a data e o motorista:"
+                  ) || "");
                   gerarAcerto(
                     acertoData.motorista,
                     acertoData.inicio,
                     acertoData.fim,
                     acertoData.salvar,
                     acertoData.descontar_vales,
-                    valesSelecionados
+                    valesSelecionados,
+                    nomeArquivo
                   );
                   setShowAcertoModal(false);
-                  setAcertoData({ motorista: "", inicio: "", fim: "", salvar: false, descontar_vales: false });
+                  setAcertoData({ motorista: "", inicio: "", fim: "", nome_arquivo: "", salvar: false, descontar_vales: false });
                   setResumoAcertoMotorista(null);
                   setValesAcerto([]);
                   setValesSelecionadosAcerto({});
@@ -1346,6 +1378,7 @@ const Viagens = () => {
                 className="btn-cancelar"
                 onClick={() => {
                   setShowAcertoModal(false);
+                  setAcertoData({ motorista: "", inicio: "", fim: "", nome_arquivo: "", salvar: false, descontar_vales: false });
                   setResumoAcertoMotorista(null);
                   setValesAcerto([]);
                   setValesSelecionadosAcerto({});
