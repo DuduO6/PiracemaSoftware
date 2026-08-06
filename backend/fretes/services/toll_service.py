@@ -3,9 +3,14 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from decimal import Decimal
+from math import cos, hypot, radians
 from urllib.request import Request, urlopen
 
-from fretes.constants import HTTP_TIMEOUT_SECONDS, TOLLS_API_BASE_URL, TOLLS_API_KEY, TOLL_PROVIDER
+from django.apps import apps
+from django.utils import timezone
+
+from fretes.constants import (HTTP_TIMEOUT_SECONDS, TOLLS_API_BASE_URL, TOLLS_API_KEY,
+                              TOLL_PROVIDER, TOLL_ROUTE_TOLERANCE_METERS)
 from fretes.exceptions import ProviderConfigurationError, TollEstimationError
 from fretes.utils.money import round_money, to_decimal
 
@@ -14,6 +19,66 @@ class BaseTollProvider(ABC):
     @abstractmethod
     def estimate_tolls(self, origin: dict, destination: dict, route: dict, payload: dict) -> dict:
         raise NotImplementedError
+
+    def get_tolls(self):
+        return []
+
+    def update(self, records):
+        raise NotImplementedError
+
+
+def _distance_point_to_segment_meters(point, start, end):
+    reference_lat = radians(point[0])
+    scale_x = 111320 * cos(reference_lat)
+    scale_y = 110540
+    px, py = point[1] * scale_x, point[0] * scale_y
+    ax, ay = start[1] * scale_x, start[0] * scale_y
+    bx, by = end[1] * scale_x, end[0] * scale_y
+    dx, dy = bx - ax, by - ay
+    if dx == 0 and dy == 0:
+        return hypot(px - ax, py - ay)
+    ratio = max(0, min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
+    return hypot(px - (ax + ratio * dx), py - (ay + ratio * dy))
+
+
+class InternalTollProvider(BaseTollProvider):
+    def __init__(self, tolerance_meters=TOLL_ROUTE_TOLERANCE_METERS):
+        self.tolerance_meters = tolerance_meters
+
+    def get_tolls(self):
+        PracaPedagio = apps.get_model("inteligencia_logistica", "PracaPedagio")
+        return PracaPedagio.objects.filter(ativo=True, latitude__isnull=False, longitude__isnull=False)
+
+    def estimate_tolls(self, origin: dict, destination: dict, route: dict, payload: dict) -> dict:
+        geometry = route.get("geometria_preview") or []
+        if len(geometry) < 2:
+            return {"quantidade": 0, "total": 0, "itens": [], "disponivel": False, "estimado": False,
+                    "mensagem": "A rota não retornou geometria suficiente para localizar pedágios.", "provedor": "internal"}
+        eixos = int(payload.get("quantidade_eixos") or 2)
+        TarifaPedagio = apps.get_model("inteligencia_logistica", "TarifaPedagio")
+        hoje = timezone.localdate()
+        itens = []
+        for praca in self.get_tolls().prefetch_related("tarifas"):
+            point = (float(praca.latitude), float(praca.longitude))
+            distancia = min(_distance_point_to_segment_meters(
+                point, (float(a["lat"]), float(a["lng"])), (float(b["lat"]), float(b["lng"]))
+            ) for a, b in zip(geometry, geometry[1:]))
+            if distancia > self.tolerance_meters:
+                continue
+            tarifa = TarifaPedagio.objects.filter(
+                pedagio=praca, quantidade_eixos=eixos, vigencia__lte=hoje
+            ).order_by("-vigencia").first()
+            if tarifa is None:
+                continue
+            itens.append({"nome": praca.praca, "rodovia": praca.rodovia, "valor": float(tarifa.valor),
+                          "localizacao": f"{praca.cidade}/{praca.estado}", "lat": float(praca.latitude),
+                          "lng": float(praca.longitude), "fonte": tarifa.fonte, "distancia_rota_m": round(distancia, 1)})
+        total = sum((Decimal(str(item["valor"])) for item in itens), Decimal("0"))
+        existem_pracas = self.get_tolls().exists()
+        return {"quantidade": len(itens), "total": float(round_money(total)), "itens": itens,
+                "disponivel": existem_pracas, "estimado": False,
+                "mensagem": "Tarifas calculadas pela base interna." if existem_pracas else "A base interna de pedágios ainda não possui praças georreferenciadas.",
+                "provedor": "internal"}
 
 
 class DisabledTollProvider(BaseTollProvider):
@@ -111,6 +176,8 @@ class GoogleRoutesTollProvider(BaseTollProvider):
 
 
 def build_toll_provider():
+    if TOLL_PROVIDER == "internal":
+        return InternalTollProvider()
     if TOLL_PROVIDER == "disabled":
         return DisabledTollProvider()
     if TOLL_PROVIDER == "google_routes":
@@ -132,6 +199,10 @@ class TollService:
                 "rodovia": item.get("rodovia", ""),
                 "valor": float(round_money(to_decimal(item.get("valor", 0)))),
                 "localizacao": item.get("localizacao", ""),
+                "lat": item.get("lat"),
+                "lng": item.get("lng"),
+                "fonte": item.get("fonte", ""),
+                "distancia_rota_m": item.get("distancia_rota_m"),
             }
             for item in items
         ]

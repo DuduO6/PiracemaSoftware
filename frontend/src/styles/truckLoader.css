@@ -1,0 +1,16 @@
+/* Animação baseada no loader Uiverse.io de vinodjangid07. */
+.truck-loading-overlay { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 20px; background: rgba(0, 0, 0, .76); backdrop-filter: blur(5px); }
+.truck-loading-card { display: grid; justify-items: center; gap: 7px; min-width: 270px; padding: 26px 30px 22px; border: 1px solid #3a3a3a; border-radius: 20px; background: #1a1a1a; color: #fff; box-shadow: 0 24px 70px rgba(0, 0, 0, .55); }
+.truck-loading-card > strong { margin-top: 5px; font-size: 16px; }.truck-loading-card > span { color: #63746a; font-size: 12px; }
+.loader { width: fit-content; height: fit-content; display: flex; align-items: center; justify-content: center; }
+.truckWrapper { width: 200px; height: 100px; display: flex; flex-direction: column; position: relative; align-items: center; justify-content: flex-end; overflow-x: hidden; }
+.truckBody { width: 130px; height: fit-content; margin-bottom: 6px; animation: motion 1s linear infinite; }
+@keyframes motion { 0% { transform: translateY(0); } 50% { transform: translateY(3px); } 100% { transform: translateY(0); } }
+.truckTires { width: 130px; height: fit-content; display: flex; align-items: center; justify-content: space-between; padding: 0 10px 0 15px; position: absolute; bottom: 0; box-sizing: border-box; }
+.truckTires svg { width: 24px; }
+.road { width: 100%; height: 1.5px; background-color: #173d2b; position: relative; bottom: 0; align-self: flex-end; border-radius: 3px; }
+.road::before { content: ""; position: absolute; width: 20px; height: 100%; background-color: #173d2b; right: -50%; border-radius: 3px; animation: roadAnimation 1.4s linear infinite; border-left: 10px solid white; }
+.road::after { content: ""; position: absolute; width: 10px; height: 100%; background-color: #173d2b; right: -65%; border-radius: 3px; animation: roadAnimation 1.4s linear infinite; border-left: 4px solid white; }
+.lampPost { position: absolute; bottom: 0; right: -90%; height: 90px; animation: roadAnimation 1.4s linear infinite; }
+@keyframes roadAnimation { 0% { transform: translateX(0); } 100% { transform: translateX(-350px); } }
+@media (prefers-reduced-motion: reduce) { .truckBody, .road::before, .road::after, .lampPost { animation-duration: 3s; } }

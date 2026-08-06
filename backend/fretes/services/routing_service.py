@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from abc import ABC, abstractmethod
+from datetime import timedelta
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+
+from django.apps import apps
+from django.conf import settings
+from django.utils import timezone
 
 from fretes.constants import (
     HTTP_TIMEOUT_SECONDS,
     HTTP_USER_AGENT,
     OSRM_BASE_URL,
+    OPENROUTESERVICE_API_KEY,
+    OPENROUTESERVICE_BASE_URL,
     ROUTES_API_BASE_URL,
     ROUTES_API_KEY,
     ROUTING_PROVIDER,
@@ -78,6 +86,9 @@ class BaseRoutingProvider(ABC):
     def calculate_route(self, origin: dict, destination: dict, payload: dict) -> dict:
         raise NotImplementedError
 
+    def calculate_matrix(self, locations: list[dict]) -> dict:
+        raise NotImplementedError("Este provider não implementa matriz de distâncias.")
+
 
 class OsrmRoutingProvider(BaseRoutingProvider):
     def calculate_route(self, origin: dict, destination: dict, payload: dict) -> dict:
@@ -125,6 +136,56 @@ class OsrmRoutingProvider(BaseRoutingProvider):
             "provedor": "osrm",
             "dados_brutos": route,
         }
+
+    def calculate_matrix(self, locations: list[dict]) -> dict:
+        coordinates = ";".join(f"{item['coordenadas']['lng']},{item['coordenadas']['lat']}" for item in locations)
+        request = Request(
+            f"{OSRM_BASE_URL}/table/v1/driving/{coordinates}?annotations=distance,duration",
+            headers={"User-Agent": HTTP_USER_AGENT},
+        )
+        try:
+            with urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
+                data = json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            raise RouteCalculationError(f"Falha ao consultar matriz OSRM: {exc}") from exc
+        return {"distancias_metros": data.get("distances", []), "duracoes_segundos": data.get("durations", []), "provedor": "osrm"}
+
+
+class OpenRouteServiceProvider(BaseRoutingProvider):
+    profile = "driving-hgv"
+
+    def _post(self, endpoint: str, body: dict) -> dict:
+        if not OPENROUTESERVICE_API_KEY:
+            raise ProviderConfigurationError("OPENROUTESERVICE_API_KEY não configurada.")
+        request = Request(
+            f"{OPENROUTESERVICE_BASE_URL}{endpoint}", data=json.dumps(body).encode("utf-8"), method="POST",
+            headers={"Authorization": OPENROUTESERVICE_API_KEY, "Content-Type": "application/json", "User-Agent": HTTP_USER_AGENT},
+        )
+        try:
+            with urlopen(request, timeout=HTTP_TIMEOUT_SECONDS) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except Exception as exc:
+            raise RouteCalculationError(f"Falha ao consultar OpenRouteService: {exc}") from exc
+
+    def calculate_route(self, origin: dict, destination: dict, payload: dict) -> dict:
+        coordinates = [[origin["coordenadas"]["lng"], origin["coordenadas"]["lat"]], [destination["coordenadas"]["lng"], destination["coordenadas"]["lat"]]]
+        data = self._post(f"/v2/directions/{self.profile}/geojson", {"coordinates": coordinates, "instructions": False})
+        features = data.get("features") or []
+        if not features:
+            raise RouteCalculationError()
+        feature = features[0]
+        summary = feature.get("properties", {}).get("summary", {})
+        geometry = feature.get("geometry", {}).get("coordinates", [])
+        distance = int(round(summary.get("distance", 0)))
+        duration = int(round(summary.get("duration", 0)))
+        return {"distancia_metros": distance, "distancia_km": round(distance / 1000, 2), "duracao_segundos": duration,
+                "duracao_formatada": format_duration(duration), "geometria_preview": simplify_route_coordinates(geometry),
+                "rodovias_referencia": [], "provedor": "openrouteservice", "dados_brutos": {"summary": summary}}
+
+    def calculate_matrix(self, locations: list[dict]) -> dict:
+        coordinates = [[item["coordenadas"]["lng"], item["coordenadas"]["lat"]] for item in locations]
+        data = self._post(f"/v2/matrix/{self.profile}", {"locations": coordinates, "metrics": ["distance", "duration"]})
+        return {"distancias_metros": data.get("distances", []), "duracoes_segundos": data.get("durations", []), "provedor": "openrouteservice"}
 
 
 class GoogleRoutesProvider(BaseRoutingProvider):
@@ -193,6 +254,8 @@ class GoogleRoutesProvider(BaseRoutingProvider):
 
 
 def build_routing_provider():
+    if ROUTING_PROVIDER == "openrouteservice":
+        return OpenRouteServiceProvider() if OPENROUTESERVICE_API_KEY else OsrmRoutingProvider()
     if ROUTING_PROVIDER == "osrm":
         return OsrmRoutingProvider()
     if ROUTING_PROVIDER == "google_routes":
@@ -205,4 +268,36 @@ class RoutingService:
         self.provider = provider or build_routing_provider()
 
     def calculate_route(self, origin: dict, destination: dict, payload: dict) -> dict:
-        return self.provider.calculate_route(origin=origin, destination=destination, payload=payload)
+        provider_name = self.provider.__class__.__name__.replace("RoutingProvider", "").replace("Provider", "").lower()
+        key_payload = {"origem": origin.get("coordenadas"), "destino": destination.get("coordenadas"), "provider": provider_name, "perfil": payload.get("tipo_veiculo", "")}
+        chave = hashlib.sha256(json.dumps(key_payload, sort_keys=True).encode()).hexdigest()
+        RouteCache = apps.get_model("inteligencia_logistica", "RouteCache")
+        if getattr(settings, "USE_ROUTE_CACHE", True):
+            cached = RouteCache.objects.filter(chave=chave, valido_ate__gt=timezone.now()).first()
+            if cached:
+                resultado = dict(cached.resposta)
+                resultado["cache"] = True
+                return resultado
+        resultado = self.provider.calculate_route(origin=origin, destination=destination, payload=payload)
+        if getattr(settings, "USE_ROUTE_CACHE", True):
+            RouteCache.objects.update_or_create(chave=chave, defaults={
+                "origem": origin, "destino": destination, "provider": resultado.get("provedor", provider_name),
+                "distancia_metros": resultado["distancia_metros"], "tempo_segundos": resultado["duracao_segundos"],
+                "pedagios": resultado.get("pedagios", []), "geometria": resultado.get("geometria_preview", []),
+                "resposta": resultado, "valido_ate": timezone.now() + timedelta(days=getattr(settings, "ROUTE_CACHE_TTL_DAYS", 30)),
+            })
+        resultado["cache"] = False
+        return resultado
+
+    def calculate_matrix(self, locations: list[dict]) -> dict:
+        if len(locations) > 100:
+            raise ValueError("A matriz está limitada a 100 locais por consulta.")
+        return self.provider.calculate_matrix(locations)
+
+
+class DistanceMatrixService:
+    def __init__(self, routing_service=None):
+        self.routing_service = routing_service or RoutingService()
+
+    def calculate(self, locations: list[dict]) -> dict:
+        return self.routing_service.calculate_matrix(locations)

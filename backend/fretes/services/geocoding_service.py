@@ -1,13 +1,23 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import unicodedata
 from abc import ABC, abstractmethod
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from django.core.cache import cache
+
 from fretes.constants import GEOCODING_PROVIDER, HTTP_TIMEOUT_SECONDS, HTTP_USER_AGENT, NOMINATIM_BASE_URL
 from fretes.exceptions import GeocodingError, ProviderConfigurationError
 from fretes.utils.validators import build_location_query
+
+
+def build_geocoding_cache_key(city: str, state: str = "") -> str:
+    location = unicodedata.normalize("NFKC", f"{city.strip()}|{state.strip()}").casefold()
+    digest = hashlib.sha256(location.encode("utf-8")).hexdigest()
+    return f"fretes:geocode:v1:{digest}"
 
 
 class BaseGeocodingProvider(ABC):
@@ -101,7 +111,13 @@ class GeocodingService:
         self.provider = provider or build_geocoding_provider()
 
     def geocode(self, city: str, state: str = "", target: str = "origem") -> dict:
-        return self.provider.geocode(city=city, state=state, target=target)
+        cache_key = build_geocoding_cache_key(city, state)
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
+        result = self.provider.geocode(city=city, state=state, target=target)
+        cache.set(cache_key, result, timeout=60 * 60 * 24 * 30)
+        return result
 
     def reverse_geocode(self, lat: float, lng: float) -> dict:
         return self.provider.reverse_geocode(lat=lat, lng=lng)

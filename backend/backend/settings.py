@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'acertos',
     'seguro_cargas',
     'fretes',
+    'inteligencia_logistica',
 ]
 
 MIDDLEWARE = [
@@ -149,6 +150,7 @@ CORS_ALLOW_HEADERS = [
     'origin',
     'user-agent',
     'x-csrftoken',
+    'x-empresa-id',
     'x-requested-with',
 ]
 
@@ -181,6 +183,14 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
+
+# Providers cartográficos desacoplados. Podem ser sobrescritos por ambiente.
+MAP_PROVIDER = os.getenv("MAP_PROVIDER", "leaflet")
+TILE_PROVIDER = os.getenv("TILE_PROVIDER", "osm")
+ROUTE_PROVIDER = os.getenv("ROUTE_PROVIDER", "openrouteservice")
+GEOCODING_PROVIDER = os.getenv("GEOCODING_PROVIDER", "nominatim")
+USE_ROUTE_CACHE = os.getenv("USE_ROUTE_CACHE", "True") == "True"
+ROUTE_CACHE_TTL_DAYS = int(os.getenv("ROUTE_CACHE_TTL_DAYS", "30"))
 
 # Static files
 STATIC_URL = '/static/'

@@ -21,6 +21,11 @@ api.interceptors.request.use(config => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
+  const empresaId = localStorage.getItem("empresa_logistica_id");
+  if (empresaId && config.url.includes("/api/inteligencia-logistica/")) {
+    config.headers["X-Empresa-ID"] = empresaId;
+  }
+
   // Se for upload (FormData) → não setar content-type (axios cuida)
   if (config.data instanceof FormData) {
     config.headers["Content-Type"] = "multipart/form-data";

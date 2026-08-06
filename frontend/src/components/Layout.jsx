@@ -89,6 +89,14 @@ function Layout() {
           </li>
           <li>
             <button
+              className={`menu-btn ${isActive("/inteligencia-logistica") ? "active" : ""}`}
+              onClick={() => handleMenuClick("INTELIGÊNCIA LOGÍSTICA", "/inteligencia-logistica")}
+            >
+              INTELIGÊNCIA LOGÍSTICA
+            </button>
+          </li>
+          <li>
+            <button
               className={`menu-btn ${isActive("/viagens/avaliador") ? "active" : ""}`}
               onClick={() => handleMenuClick("AVALIADOR DE VIAGENS", "/viagens/avaliador")}
             >
