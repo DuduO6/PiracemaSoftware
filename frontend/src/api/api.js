@@ -1,7 +1,8 @@
 import axios from "axios";
 
-// Usa variável de ambiente ou fallback para desenvolvimento local
-const API_URL = process.env.REACT_APP_API_URL || "http://127.0.0.1:8000";
+// Em produção nunca aponta para o localhost do usuário.
+const API_URL = process.env.REACT_APP_API_URL
+  || (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000" : window.location.origin);
 
 
 const api = axios.create({

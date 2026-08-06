@@ -11,6 +11,7 @@ import "leaflet-draw/dist/leaflet.draw.css";
 
 import {
   calcularFrete,
+  criarEmpresaInicial,
   listarEmpresas,
   listarOportunidades,
   listarPerfis,
@@ -125,7 +126,11 @@ export default function InteligenciaLogistica() {
 
   useEffect(() => {
     listarEmpresas()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
+        if (!data.length) {
+          const criada = await criarEmpresaInicial();
+          data = [criada.data];
+        }
         setEmpresas(data);
         const empresaArmazenada = localStorage.getItem("empresa_logistica_id") || "";
         const atual = data.some((empresa) => String(empresa.id) === String(empresaArmazenada))

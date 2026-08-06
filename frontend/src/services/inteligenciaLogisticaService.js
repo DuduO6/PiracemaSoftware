@@ -3,6 +3,7 @@ import api from "../api/api";
 const raiz = "/api/inteligencia-logistica";
 
 export const listarEmpresas = () => api.get(`${raiz}/minhas-empresas/`);
+export const criarEmpresaInicial = () => api.post(`${raiz}/minhas-empresas/`);
 export const listarRegioesLogisticas = () => api.get(`${raiz}/regioes-logisticas/`);
 export const listarOportunidades = () => api.get(`${raiz}/oportunidades/`);
 export const listarPerfis = () => api.get(`${raiz}/perfis/`);

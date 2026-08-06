@@ -54,6 +54,15 @@ class InteligenciaLogisticaTests(TestCase):
         ids = {item["id"] for item in response.json()}
         self.assertEqual(ids, {self.a.id, self.b.id})
 
+    def test_cria_empresa_inicial_quando_usuario_nao_tem_tenant(self):
+        usuario = get_user_model().objects.create_user("semempresa", "semempresa@example.com", "senha-forte")
+        client = APIClient()
+        client.force_authenticate(usuario)
+        response = client.post("/api/inteligencia-logistica/minhas-empresas/", {}, format="json")
+        self.assertEqual(response.status_code, 201, response.json())
+        self.assertTrue(MembroEmpresa.objects.filter(usuario=usuario, empresa_id=response.json()["id"], ativo=True).exists())
+        self.assertTrue(ConfiguracaoLogisticaEmpresa.objects.filter(empresa_id=response.json()["id"], ativo=True).exists())
+
     def test_catalogo_nacional_e_somente_leitura(self):
         self.assertGreaterEqual(PoloLogisticoNacional.objects.count(), 50)
         self.assertEqual(ProdutoLogistico.objects.count(), 8)

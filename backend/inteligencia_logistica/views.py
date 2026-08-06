@@ -1,11 +1,13 @@
 from decimal import Decimal
 
 from rest_framework import permissions, status, viewsets
+from django.db import transaction
+from django.utils.text import slugify
 from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import (ConfiguracaoLogisticaEmpresa, DecisaoLogistica, LocalLogistico,
+from .models import (ConfiguracaoLogisticaEmpresa, DecisaoLogistica, Empresa, LocalLogistico,
                      IndicadorFrete, MembroEmpresa, ModeloLogisticoIA, OportunidadeFrete, ParceiroFrete,
                      PerfilEstrategia, PoloLogisticoNacional, ProdutoLogistico, ResultadoAprendizadoLogistico,
                      RotaEstrategica)
@@ -36,6 +38,28 @@ class MinhasEmpresasView(APIView):
             {"id": membro.empresa_id, "nome": membro.empresa.nome, "papel": membro.papel}
             for membro in membros
         ])
+
+    @transaction.atomic
+    def post(self, request):
+        membro = MembroEmpresa.objects.select_related("empresa").filter(
+            usuario=request.user, ativo=True, empresa__ativo=True
+        ).first()
+        if membro:
+            return Response({"id": membro.empresa_id, "nome": membro.empresa.nome, "papel": membro.papel})
+        nome_usuario = request.user.get_full_name().strip() or request.user.get_username()
+        slug = f"{slugify(nome_usuario) or 'empresa'}-{request.user.id}"
+        empresa, _ = Empresa.objects.get_or_create(
+            slug=slug, defaults={"nome": f"Transportadora {nome_usuario}"[:160]}
+        )
+        membro, _ = MembroEmpresa.objects.get_or_create(
+            empresa=empresa, usuario=request.user, defaults={"papel": MembroEmpresa.Papel.ADMIN, "ativo": True}
+        )
+        if not membro.ativo:
+            membro.ativo = True
+            membro.papel = MembroEmpresa.Papel.ADMIN
+            membro.save(update_fields=("ativo", "papel"))
+        ConfiguracaoLogisticaEmpresa.objects.get_or_create(empresa=empresa, nivel="GLOBAL")
+        return Response({"id": empresa.id, "nome": empresa.nome, "papel": membro.papel}, status=status.HTTP_201_CREATED)
 
 
 class RegioesLogisticasView(APIView):
