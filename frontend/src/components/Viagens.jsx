@@ -41,6 +41,36 @@ const formatarMoeda = (valor) => `R$ ${Number(valor || 0).toLocaleString("pt-BR"
   maximumFractionDigits: 2,
 })}`;
 
+const ROTULOS_CAMPOS_VIAGEM = {
+  motorista: "Motorista",
+  data: "Data",
+  origem: "Origem",
+  destino: "Destino",
+  cliente: "Cliente",
+  numero_cte: "Número do CT-e",
+  peso: "Peso",
+  valor_tonelada: "Valor por tonelada",
+  valor_total_informado: "Valor total do frete",
+};
+
+const formatarErroApi = (data) => {
+  if (!data) return "Não foi possível validar os dados da viagem.";
+  if (typeof data === "string") return data;
+  if (Array.isArray(data)) return data.map(formatarErroApi).join("\n");
+
+  if (typeof data === "object") {
+    return Object.entries(data)
+      .map(([campo, mensagem]) => {
+        const texto = formatarErroApi(mensagem);
+        if (["detail", "non_field_errors"].includes(campo)) return texto;
+        return `${ROTULOS_CAMPOS_VIAGEM[campo] || campo}: ${texto}`;
+      })
+      .join("\n");
+  }
+
+  return String(data);
+};
+
 const sanitizarNomeArquivo = (valor) => {
   return String(valor || "")
     .normalize("NFD")
@@ -92,6 +122,8 @@ const Viagens = () => {
   const [showDuplicidadeModal, setShowDuplicidadeModal] = useState(false);
   const [payloadPendente, setPayloadPendente] = useState(null);
   const [alertaDuplicidade, setAlertaDuplicidade] = useState(null);
+  const [verificandoDuplicidade, setVerificandoDuplicidade] = useState(false);
+  const [salvandoViagem, setSalvandoViagem] = useState(false);
 
   const [showFiltro, setShowFiltro] = useState(false);
   const [filtro, setFiltro] = useState({
@@ -450,6 +482,8 @@ const Viagens = () => {
   }
 
   const prepararSalvarViagem = async () => {
+    if (verificandoDuplicidade) return;
+
     const temValorTonelada = modoValorAtual === VALOR_POR_TONELADA && Boolean(viagemData.valor_tonelada);
     const temValorTotal = modoValorAtual === VALOR_TOTAL_FRETE && Boolean(viagemData.valor_total_informado);
 
@@ -489,47 +523,50 @@ const Viagens = () => {
       delete payload.valor_tonelada;
     }
 
+    setVerificandoDuplicidade(true);
+    setAlertaDuplicidade(null);
+    setPayloadPendente(payload);
+
     try {
       const res = await api.post("/api/viagens/verificar_duplicidade/", payload);
       const duplicidade = res.data?.duplicada ? res.data : null;
       setAlertaDuplicidade(duplicidade);
-      setPayloadPendente(payload);
 
       if (duplicidade) {
         setShowDuplicidadeModal(true);
         return;
       }
-    } catch (err) {
-      console.error("Erro ao verificar duplicidade:", err);
-      setAlertaDuplicidade(null);
-    }
 
-    setShowConfirmacaoModal(true);
+      setShowConfirmacaoModal(true);
+    } catch (err) {
+      console.error("Erro ao verificar duplicidade:", err.response?.data || err);
+      setAlertaDuplicidade(null);
+      setPayloadPendente(null);
+      alert(`Confira os dados informados:\n${formatarErroApi(err.response?.data)}`);
+    } finally {
+      setVerificandoDuplicidade(false);
+    }
   };
 
-  const confirmarSalvarViagem = () => {
-    if (!payloadPendente) return;
+  const confirmarSalvarViagem = async () => {
+    if (!payloadPendente || salvandoViagem) return;
 
-    if (modoEdicao && viagemData.id) {
-      api.put(`/api/viagens/${viagemData.id}/`, payloadPendente)
-        .then((res) => {
-          setViagens((prev) => prev.map(v => v.id === viagemData.id ? res.data : v));
-          fecharModal();
-        })
-        .catch((err) => {
-          console.error("Erro ao editar viagem:", err);
-          alert(err.response?.data?.detail || JSON.stringify(err.response?.data) || "Erro ao editar viagem.");
-        });
-    } else {
-      api.post("/api/viagens/", payloadPendente)
-        .then((res) => {
-          setViagens((prev) => [...prev, res.data]);
-          fecharModal();
-        })
-        .catch((err) => {
-          console.error("Erro ao adicionar viagem:", err);
-          alert(err.response?.data?.detail || JSON.stringify(err.response?.data) || "Erro ao adicionar viagem.");
-        });
+    setSalvandoViagem(true);
+
+    try {
+      if (modoEdicao && viagemData.id) {
+        const res = await api.put(`/api/viagens/${viagemData.id}/`, payloadPendente);
+        setViagens((prev) => prev.map(v => v.id === viagemData.id ? res.data : v));
+      } else {
+        const res = await api.post("/api/viagens/", payloadPendente);
+        setViagens((prev) => [...prev, res.data]);
+      }
+      fecharModal();
+    } catch (err) {
+      console.error("Erro ao salvar viagem:", err.response?.data || err);
+      alert(`Não foi possível salvar a viagem:\n${formatarErroApi(err.response?.data)}`);
+    } finally {
+      setSalvandoViagem(false);
     }
   };
 
@@ -1073,8 +1110,12 @@ const Viagens = () => {
             </div>
 
             <div className="modal-buttons">
-              <button className="btn-salvar" onClick={prepararSalvarViagem}>
-                {modoEdicao ? "SALVAR" : "ADICIONAR"}
+              <button
+                className="btn-salvar"
+                onClick={prepararSalvarViagem}
+                disabled={verificandoDuplicidade}
+              >
+                {verificandoDuplicidade ? "VERIFICANDO..." : (modoEdicao ? "SALVAR" : "ADICIONAR")}
               </button>
               <button className="btn-cancelar" onClick={fecharModal}>
                 CANCELAR
@@ -1177,8 +1218,12 @@ const Viagens = () => {
             <p className="confirmacao-texto">As informações acima estão corretas?</p>
 
             <div className="modal-buttons">
-              <button className="btn-salvar" onClick={confirmarSalvarViagem}>
-                CONFIRMAR E SALVAR
+              <button
+                className="btn-salvar"
+                onClick={confirmarSalvarViagem}
+                disabled={salvandoViagem}
+              >
+                {salvandoViagem ? "SALVANDO..." : "CONFIRMAR E SALVAR"}
               </button>
               <button
                 className="btn-cancelar"
