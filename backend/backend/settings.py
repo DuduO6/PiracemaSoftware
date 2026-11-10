@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'seguro_cargas',
     'fretes',
     'inteligencia_logistica',
+    'mdfe',
 ]
 
 MIDDLEWARE = [
@@ -191,6 +192,32 @@ ROUTE_PROVIDER = os.getenv("ROUTE_PROVIDER", "openrouteservice")
 GEOCODING_PROVIDER = os.getenv("GEOCODING_PROVIDER", "nominatim")
 USE_ROUTE_CACHE = os.getenv("USE_ROUTE_CACHE", "True") == "True"
 ROUTE_CACHE_TTL_DAYS = int(os.getenv("ROUTE_CACHE_TTL_DAYS", "30"))
+
+# MDF-e: produção permanece bloqueada até liberação dupla (ambiente + cadastro).
+MDFE_ENCRYPTION_KEY = os.getenv("MDFE_ENCRYPTION_KEY", "")
+MDFE_ENABLE_PRODUCTION = os.getenv("MDFE_ENABLE_PRODUCTION", "False") == "True"
+MDFE_CONNECT_TIMEOUT_SECONDS = int(os.getenv("MDFE_CONNECT_TIMEOUT_SECONDS", "15"))
+MDFE_READ_TIMEOUT_SECONDS = int(os.getenv("MDFE_READ_TIMEOUT_SECONDS", "45"))
+MDFE_CA_BUNDLE = os.getenv(
+    "MDFE_CA_BUNDLE",
+    os.path.join(BASE_DIR, "mdfe", "certs", "icp-brasil-v10.pem"),
+)
+# O portal web usa cadeia pública comum, distinta da cadeia mTLS dos Web Services.
+MDFE_PORTAL_CA_BUNDLE = os.getenv("MDFE_PORTAL_CA_BUNDLE", "") or True
+MDFE_PORTAL_DOWNLOAD_URL = "https://dfe-portal.svrs.rs.gov.br/MdfeSSL/DownloadXmlDfe"
+# Política opcional: aceita do Portal XML cuja assinatura de conteúdo não pôde ser
+# validada. Os dados extraídos são classificados como estritamente informativos.
+MDFE_ALLOW_INFORMATIONAL_PORTAL_XML = os.getenv(
+    "MDFE_ALLOW_INFORMATIONAL_PORTAL_XML", "False"
+).lower() == "true"
+# Compatibilidade com a exceção temporária anterior, restrita ao desenvolvimento.
+MDFE_ALLOW_UNVERIFIED_PORTAL_XML = DEBUG and os.getenv(
+    "MDFE_ALLOW_UNVERIFIED_PORTAL_XML", "False"
+).lower() == "true"
+MDFE_MUNICIPALITIES_FILE = os.getenv(
+    "MDFE_MUNICIPALITIES_FILE",
+    os.path.join(os.path.dirname(BASE_DIR), "frontend", "src", "data", "municipiosBrasil.json"),
+)
 
 # Static files
 STATIC_URL = '/static/'

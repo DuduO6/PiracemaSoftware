@@ -23,7 +23,10 @@ api.interceptors.request.use(config => {
   }
 
   const empresaId = localStorage.getItem("empresa_logistica_id");
-  if (empresaId && config.url.includes("/api/inteligencia-logistica/")) {
+  if (
+    empresaId &&
+    config.url.includes("/api/mdfe/")
+  ) {
     config.headers["X-Empresa-ID"] = empresaId;
   }
 

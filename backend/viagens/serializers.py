@@ -144,17 +144,3 @@ class ViagemSerializer(serializers.ModelSerializer):
         raise serializers.ValidationError(
             {"non_field_errors": ["Informe o valor por tonelada ou o valor total do frete."]}
         )
-
-
-class AvaliadorViagemSerializer(serializers.Serializer):
-    viagem_id = serializers.IntegerField(required=True, min_value=1)
-    media_km_por_litro = serializers.DecimalField(
-        required=True, max_digits=8, decimal_places=2, min_value=Decimal("0.01")
-    )
-    preco_combustivel = serializers.DecimalField(
-        required=True, max_digits=8, decimal_places=2, min_value=Decimal("0.01")
-    )
-    cidade_origem = serializers.CharField(required=False, allow_blank=True, max_length=120, default="")
-    estado_origem = serializers.CharField(required=False, allow_blank=True, max_length=2, default="")
-    cidade_destino = serializers.CharField(required=False, allow_blank=True, max_length=120, default="")
-    estado_destino = serializers.CharField(required=False, allow_blank=True, max_length=2, default="")

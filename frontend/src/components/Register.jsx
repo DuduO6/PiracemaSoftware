@@ -6,6 +6,7 @@ function Register() {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
+    cnpj: '',
     password: '',
     confirmPassword: ''
   });
@@ -35,6 +36,11 @@ function Register() {
       newErrors.confirmPassword = 'As senhas não coincidem';
     }
 
+    const normalizedCnpj = formData.cnpj.replace(/\D/g, '');
+    if (formData.cnpj && normalizedCnpj.length !== 14) {
+      newErrors.cnpj = 'CNPJ deve ter 14 números';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -45,9 +51,10 @@ function Register() {
     if (!validateForm()) return;
 
     try {
-      const response = await api.post("/auth/register/", {
+      await api.post("/auth/register/", {
         username: formData.username,
         email: formData.email,
+        cnpj: formData.cnpj,
         password: formData.password
       });
 
@@ -102,6 +109,20 @@ function Register() {
             className={`form-input ${errors.email ? 'input-error' : ''}`}
           />
           {errors.email && <span className="error-message">{errors.email}</span>}
+        </div>
+
+        <div className="form-group">
+          <label>CNPJ (opcional):</label>
+          <input
+            type="text"
+            name="cnpj"
+            value={formData.cnpj}
+            onChange={handleChange}
+            placeholder="00.000.000/0000-00"
+            maxLength="18"
+            className={`form-input ${errors.cnpj ? 'input-error' : ''}`}
+          />
+          {errors.cnpj && <span className="error-message">{errors.cnpj}</span>}
         </div>
 
         <div className="form-group">

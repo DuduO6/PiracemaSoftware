@@ -6,7 +6,7 @@ from rest_framework import permissions
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
-from .serializers import RegisterSerializer, LoginSerializer
+from .serializers import RegisterSerializer, LoginSerializer, UserAccountSerializer
 
 
 class RegisterView(generics.CreateAPIView):
@@ -23,6 +23,7 @@ class RegisterView(generics.CreateAPIView):
                 "id": user.id,
                 "username": user.username,
                 "email": user.email,
+                "cnpj": user.cnpj,
             }
         }, status=status.HTTP_201_CREATED)
 
@@ -58,9 +59,15 @@ class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        return Response({
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-        })
+        return Response(UserAccountSerializer(request.user).data)
+
+    def patch(self, request):
+        serializer = UserAccountSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        data = serializer.data
+        data["senha_alterada"] = bool(request.data.get("nova_senha"))
+        return Response(data)
+
+    def put(self, request):
+        return self.patch(request)

@@ -16,8 +16,9 @@ import Acertos from "./components/Acertos.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import SeguroCargas from "./pages/SeguroCargas.jsx";
 import FreteCalculator from "./pages/FreteCalculator.jsx";
-import AvaliadorViagens from "./pages/AvaliadorViagens.jsx";
-import InteligenciaLogistica from "./pages/InteligenciaLogistica.jsx";
+import ManifestosMdfe from "./pages/ManifestosMdfe.jsx";
+import MinhaConta from "./pages/MinhaConta.jsx";
+import { ThemeProvider } from "./theme/ThemeContext.jsx";
 
 function App() {
   useEffect(() => {
@@ -47,8 +48,9 @@ function App() {
   }, []);
 
   return (
-    <HashRouter>
-      <Routes>
+    <ThemeProvider>
+      <HashRouter>
+        <Routes>
         {/* Rotas públicas */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
@@ -68,11 +70,12 @@ function App() {
           <Route path="/acertos" element={<Acertos />} />
           <Route path="/seguro-cargas" element={<SeguroCargas />} />
           <Route path="/fretes/calculadora" element={<FreteCalculator />} />
-          <Route path="/viagens/avaliador" element={<AvaliadorViagens />} />
-          <Route path="/inteligencia-logistica" element={<InteligenciaLogistica />} />
+          <Route path="/manifestos-mdfe" element={<ManifestosMdfe />} />
+          <Route path="/minha-conta" element={<MinhaConta />} />
         </Route>
-      </Routes>
-    </HashRouter>
+        </Routes>
+      </HashRouter>
+    </ThemeProvider>
   );
 }
 
