@@ -56,7 +56,7 @@ INSTALLED_APPS = [
     'fretes',
     'inteligencia_logistica',
     'mdfe',
-    'idempotency-key',
+    
 ]
 
 MIDDLEWARE = [
@@ -154,6 +154,7 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-empresa-id',
     'x-requested-with',
+    'idempotency-key',
 ]
 
 # CSRF Configuration
