@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { calcularFrete } from "../services/freteService";
+import { importarDocumentoFiscal } from "../services/seguroCargasService";
 import municipiosBrasil from "../data/municipiosBrasil.json";
 import "../styles/freteCalculator.css";
 
@@ -38,6 +39,15 @@ const initialForm = {
   adicionar_lucro_adicional: false,
   percentual_lucro_adicional: "0",
   peso_estimado_toneladas: "0",
+  valor_carga: "",
+  multiplicador_seguro: "2",
+  acrescimo_fixo_seguro: "6.00",
+  piso_seguro: "30.00",
+  proporcao_rctrc: "50",
+  precisao_percentual: "6",
+  margem_adicional: "200.00",
+  pedagio: "0.00",
+  outras_despesas: "0.00",
 };
 
 const formatarMoeda = valor =>
@@ -102,9 +112,39 @@ function FreteCalculator() {
   const [municipiosOrigem, setMunicipiosOrigem] = useState([]);
   const [municipiosDestino, setMunicipiosDestino] = useState([]);
   const [mostrarRota, setMostrarRota] = useState(false);
+  const [importandoXml, setImportandoXml] = useState(false);
+  const [mensagem, setMensagem] = useState("");
   const queryOrigem = formData.cidade_origem.trim();
   const queryDestino = formData.cidade_destino.trim();
   const tipoCargaAtual = TIPOS_CARGA.find(item => item.value === formData.tipo_carga);
+
+  useEffect(() => {
+    try {
+      const documento = JSON.parse(localStorage.getItem("piracema.documentoFiscal"));
+      const config = JSON.parse(localStorage.getItem("piracema.seguro.configuracao"));
+      setFormData(prev => ({
+        ...prev,
+        ...(config ? {
+          multiplicador_seguro: config.multiplicador || prev.multiplicador_seguro,
+          acrescimo_fixo_seguro: config.acrescimo_fixo || prev.acrescimo_fixo_seguro,
+          piso_seguro: config.piso_comercial || prev.piso_seguro,
+          proporcao_rctrc: config.proporcao_rctrc || prev.proporcao_rctrc,
+          precisao_percentual: config.precisao_percentual || prev.precisao_percentual,
+          margem_adicional: config.margem_adicional || prev.margem_adicional,
+        } : {}),
+        ...(documento ? {
+          cidade_origem: documento.cidade_origem || prev.cidade_origem,
+          estado_origem: documento.uf_origem || prev.estado_origem,
+          cidade_destino: documento.cidade_destino || prev.cidade_destino,
+          estado_destino: documento.uf_destino || prev.estado_destino,
+          valor_carga: documento.valor_carga || prev.valor_carga,
+          peso_estimado_toneladas: documento.peso_toneladas || prev.peso_estimado_toneladas,
+        } : {}),
+      }));
+    } catch {
+      // Mantém o formulário padrão se não houver dados compartilhados válidos.
+    }
+  }, []);
 
   const handleChange = event => {
     const { name, value, type, checked } = event.target;
@@ -149,9 +189,40 @@ function FreteCalculator() {
     setMunicipiosDestino([]);
   };
 
+  const handleImportXml = async event => {
+    const arquivo = event.target.files?.[0];
+    if (!arquivo) return;
+    setImportandoXml(true); setErro(""); setMensagem("");
+    try {
+      const documento = await importarDocumentoFiscal(arquivo);
+      localStorage.setItem("piracema.documentoFiscal", JSON.stringify(documento));
+      setFormData(prev => ({
+        ...prev,
+        cidade_origem: documento.cidade_origem || prev.cidade_origem,
+        estado_origem: documento.uf_origem,
+        cidade_destino: documento.cidade_destino || prev.cidade_destino,
+        estado_destino: documento.uf_destino,
+        valor_carga: documento.valor_carga,
+        peso_estimado_toneladas: documento.peso_toneladas || prev.peso_estimado_toneladas,
+      }));
+      setMensagem(`${documento.tipo_documento} importado. Revise os dados antes de calcular.`);
+    } catch (requestError) {
+      setErro(requestError.response?.data?.detail || "Não foi possível ler o XML.");
+    } finally {
+      setImportandoXml(false);
+      event.target.value = "";
+    }
+  };
+
+  const copiarPercentual = async (valor, rotulo) => {
+    await navigator.clipboard.writeText(valor);
+    setMensagem(`${rotulo} copiado.`);
+  };
+
   const handleSubmit = async event => {
     event.preventDefault();
     setErro("");
+    setMensagem("");
     setResultado(null);
     setMostrarRota(false);
     setLoading(true);
@@ -161,6 +232,8 @@ function FreteCalculator() {
         quantidade_eixos: Number(formData.quantidade_eixos),
         percentual_lucro_adicional: Number(formData.percentual_lucro_adicional),
         peso_estimado_toneladas: Number(formData.peso_estimado_toneladas),
+        valor_carga: formData.valor_carga || null,
+        precisao_percentual: formData.precisao_percentual,
       });
       setResultado(response);
     } catch (requestError) {
@@ -188,6 +261,11 @@ function FreteCalculator() {
             <h2>Parâmetros do cálculo</h2>
             <span>Campos alinhados à lógica da calculadora oficial da ANTT.</span>
           </div>
+
+          <label className="frete-xml-upload">
+            {importandoXml ? "Lendo XML..." : "Importar XML de NF-e ou CT-e"}
+            <input type="file" accept=".xml,text/xml,application/xml" onChange={handleImportXml} disabled={importandoXml} />
+          </label>
 
           <div className="frete-grid">
             <label>
@@ -254,6 +332,26 @@ function FreteCalculator() {
               <input type="number" step="0.01" min="0" name="peso_estimado_toneladas" value={formData.peso_estimado_toneladas} onChange={handleChange} />
             </label>
             <label>
+              Valor total da carga
+              <small>Usado na planilha de seguro e nos percentuais.</small>
+              <input inputMode="decimal" name="valor_carga" value={formData.valor_carga} onChange={handleChange} placeholder="100000.00" />
+            </label>
+            <label>
+              Margem comercial (R$)
+              <small>Componente adicional, padrão R$ 200,00.</small>
+              <input inputMode="decimal" name="margem_adicional" value={formData.margem_adicional} onChange={handleChange} />
+            </label>
+            <label>
+              Pedágio (R$)
+              <small>Somado separadamente quando aplicável.</small>
+              <input inputMode="decimal" name="pedagio" value={formData.pedagio} onChange={handleChange} />
+            </label>
+            <label>
+              Outras despesas (R$)
+              <small>Custos adicionais informados para a operação.</small>
+              <input inputMode="decimal" name="outras_despesas" value={formData.outras_despesas} onChange={handleChange} />
+            </label>
+            <label>
               Lucro adicional (%)
               <small>Opcional. Acrescenta margem sobre o valor da tabela.</small>
               <input
@@ -267,6 +365,18 @@ function FreteCalculator() {
               />
             </label>
           </div>
+
+          <details className="frete-insurance-config">
+            <summary>Configuração do seguro e dos percentuais</summary>
+            <div className="frete-grid">
+              <label>Multiplicador<input inputMode="decimal" name="multiplicador_seguro" value={formData.multiplicador_seguro} onChange={handleChange} /></label>
+              <label>Acréscimo fixo (R$)<input inputMode="decimal" name="acrescimo_fixo_seguro" value={formData.acrescimo_fixo_seguro} onChange={handleChange} /></label>
+              <label>Piso do seguro (R$)<input inputMode="decimal" name="piso_seguro" value={formData.piso_seguro} onChange={handleChange} /></label>
+              <label>Proporção RCTR-C (%)<input inputMode="decimal" name="proporcao_rctrc" value={formData.proporcao_rctrc} onChange={handleChange} /></label>
+              <label>Casas decimais do emissor<input type="number" min="1" max="10" name="precisao_percentual" value={formData.precisao_percentual} onChange={handleChange} /></label>
+            </div>
+            <p>A divisão inicial 50/50 é apenas ilustrativa e não corresponde às taxas efetivas de uma apólice.</p>
+          </details>
 
           <div className="frete-checks">
             <label className="frete-check">
@@ -292,6 +402,7 @@ function FreteCalculator() {
           </div>
 
           {erro ? <div className="frete-alert erro">{erro}</div> : null}
+          {mensagem ? <div className="frete-alert sucesso">{mensagem}</div> : null}
 
           <div className="frete-actions">
             <button type="submit" className="frete-button" disabled={loading}>
@@ -346,6 +457,39 @@ function FreteCalculator() {
                   </dl>
                 </section>
               </div>
+
+              {resultado.seguro_cargas ? (
+                <>
+                  <section className="frete-commercial-panel">
+                    <h3>Seguro de cargas</h3>
+                    <div className="frete-commercial-grid">
+                      <article><span>UF origem / destino</span><strong>{resultado.seguro_cargas.origem} → {resultado.seguro_cargas.destino}</strong></article>
+                      <article><span>Valor total da carga</span><strong>{formatarMoeda(resultado.seguro_cargas.valor_carga)}</strong></article>
+                      <article><span>Valor original da planilha</span><strong>{formatarMoeda(resultado.seguro_cargas.planilha.valor_original)}</strong></article>
+                      <article><span>Seguro calculado</span><strong>{formatarMoeda(resultado.seguro_cargas.seguro.valor_final)}</strong></article>
+                    </div>
+                    <p>Piso comercial de {formatarMoeda(resultado.seguro_cargas.seguro.parametros.piso_comercial)}: {resultado.seguro_cargas.seguro.piso_aplicado ? "aplicado" : "não aplicado"}.</p>
+                  </section>
+
+                  <section className="frete-commercial-panel">
+                    <h3>Percentuais para informar no emissor de CT-e</h3>
+                    <p>{resultado.seguro_cargas.percentuais.descricao}; não são taxas oficiais da apólice.</p>
+                    <div className="frete-percentual-row"><div><span>RCTR-C</span><strong>{resultado.seguro_cargas.percentuais.rctrc}%</strong><small>{formatarMoeda(resultado.seguro_cargas.percentuais.valor_efetivo_rctrc)}</small></div><button type="button" onClick={() => copiarPercentual(resultado.seguro_cargas.percentuais.rctrc, "RCTR-C")}>Copiar</button></div>
+                    <div className="frete-percentual-row"><div><span>RC-DC</span><strong>{resultado.seguro_cargas.percentuais.rcdc}%</strong><small>{formatarMoeda(resultado.seguro_cargas.percentuais.valor_efetivo_rcdc)}</small></div><button type="button" onClick={() => copiarPercentual(resultado.seguro_cargas.percentuais.rcdc, "RC-DC")}>Copiar</button></div>
+                    <dl className="frete-commercial-breakdown"><div><dt>Soma efetiva</dt><dd>{formatarMoeda(resultado.seguro_cargas.percentuais.seguro_reconstituido)}</dd></div><div><dt>Seguro esperado</dt><dd>{formatarMoeda(resultado.seguro_cargas.percentuais.seguro_esperado)}</dd></div><div><dt>Diferença de arredondamento</dt><dd>{formatarMoeda(resultado.seguro_cargas.percentuais.diferenca_arredondamento)}</dd></div></dl>
+                    {!resultado.seguro_cargas.percentuais.reproduz_exatamente ? <div className="frete-alert aviso">A precisão configurada não reproduz exatamente o seguro esperado.</div> : null}
+                  </section>
+
+                  <section className="frete-final-card">
+                    <span>VALOR FINAL SUGERIDO DO FRETE</span>
+                    <strong>{formatarMoeda(resultado.valor_final_sugerido.total)}</strong>
+                    <dl className="frete-commercial-breakdown"><div><dt>Piso mínimo ANTT</dt><dd>{formatarMoeda(resultado.valor_final_sugerido.piso_minimo_antt)}</dd></div><div><dt>Seguro final</dt><dd>{formatarMoeda(resultado.valor_final_sugerido.seguro_final)}</dd></div><div><dt>Margem adicional</dt><dd>{formatarMoeda(resultado.valor_final_sugerido.margem_adicional)}</dd></div><div><dt>Pedágio</dt><dd>{formatarMoeda(resultado.valor_final_sugerido.pedagio)}</dd></div><div><dt>Outras despesas</dt><dd>{formatarMoeda(resultado.valor_final_sugerido.outras_despesas)}</dd></div></dl>
+                    <p>Seguro e margem são componentes comerciais adicionais, não coeficientes da tabela ANTT. O pedágio permanece discriminado separadamente.</p>
+                  </section>
+                </>
+              ) : (
+                <div className="frete-alert aviso">Informe o valor da carga para incluir seguro, percentuais RCTR-C/RC-DC e o valor final sugerido.</div>
+              )}
 
               <div className="frete-route-actions">
                 <button type="button" className="frete-secondary-button" onClick={() => setMostrarRota(prev => !prev)}>

@@ -56,11 +56,11 @@ def calcular_seguro(origem: str, destino: str, valor_rctr_c: object, valor_rcdc:
     valor_rctr_c_decimal = _decimal(valor_rctr_c)
     valor_rcdc_decimal = _decimal(valor_rcdc)
 
-    taxa_base_float, modo_busca, origem_canonica, destino_canonico = buscar_taxa_deslocamento(
+    taxa_base_decimal, modo_busca, origem_canonica, destino_canonico = buscar_taxa_deslocamento(
         origem=origem,
         destino=destino,
     )
-    taxa_base = _decimal(taxa_base_float)
+    taxa_base = _decimal(taxa_base_decimal)
 
     taxa_fluvial_aplicada = TAXA_FLUVIAL if localidade_tem_taxa_fluvial(origem_canonica, destino_canonico) else _decimal("0.0")
 

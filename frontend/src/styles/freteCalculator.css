@@ -216,6 +216,70 @@
   color: #fde68a;
 }
 
+.frete-alert.sucesso {
+  background: rgba(6, 78, 59, 0.28);
+  border: 1px solid rgba(52, 211, 153, 0.28);
+  color: #a7f3d0;
+}
+
+.frete-xml-upload {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px dashed rgba(96, 165, 250, 0.5);
+  border-radius: 14px;
+  color: #bfdbfe;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.frete-xml-upload input { display: none; }
+
+.frete-insurance-config {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
+  background: rgba(2, 6, 23, 0.3);
+}
+
+.frete-insurance-config summary { margin-bottom: 12px; color: #dbeafe; font-weight: 700; cursor: pointer; }
+.frete-insurance-config > p { margin: 12px 0 0; color: #8fa5bc; font-size: 13px; line-height: 1.5; }
+
+.frete-commercial-panel,
+.frete-final-card {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 16px;
+  background: rgba(2, 6, 23, 0.42);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.frete-commercial-panel h3 { margin: 0 0 8px; }
+.frete-commercial-panel > p { color: #90a4bc; font-size: 13px; }
+.frete-commercial-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.frete-commercial-grid article { padding: 14px; border-radius: 14px; background: rgba(15, 23, 42, 0.75); }
+.frete-commercial-grid span, .frete-commercial-grid strong { display: block; }
+.frete-commercial-grid span { color: #90a4bc; font-size: 12px; }
+.frete-commercial-grid strong { margin-top: 7px; color: #f8fafc; }
+
+.frete-percentual-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-top: 12px; padding: 14px; border-radius: 14px; background: rgba(15, 23, 42, 0.76); }
+.frete-percentual-row span, .frete-percentual-row strong, .frete-percentual-row small { display: block; }
+.frete-percentual-row span, .frete-percentual-row small { color: #90a4bc; }
+.frete-percentual-row strong { margin: 4px 0; font-size: 22px; color: #f8fafc; }
+.frete-percentual-row button { border: 0; border-radius: 10px; padding: 10px 14px; background: #bfdbfe; color: #172554; font-weight: 700; cursor: pointer; }
+
+.frete-commercial-breakdown { margin: 14px 0 0; }
+.frete-commercial-breakdown div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid rgba(148, 163, 184, 0.1); }
+.frete-commercial-breakdown dt { color: #9fb0c7; }
+.frete-commercial-breakdown dd { margin: 0; color: #f8fafc; font-weight: 700; text-align: right; }
+
+.frete-final-card { border-color: rgba(52, 211, 153, 0.3); background: linear-gradient(145deg, rgba(6, 78, 59, 0.26), rgba(2, 6, 23, 0.54)); }
+.frete-final-card > span { color: #a7f3d0; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; }
+.frete-final-card > strong { display: block; margin-top: 8px; color: #ecfdf5; font-size: clamp(30px, 4vw, 44px); }
+.frete-final-card > p { color: #9fb0c7; font-size: 13px; line-height: 1.6; }
+
 .frete-highlights {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -391,7 +455,8 @@
 
   .frete-grid,
   .frete-checks,
-  .frete-highlights {
+  .frete-highlights,
+  .frete-commercial-grid {
     grid-template-columns: 1fr;
   }
 }

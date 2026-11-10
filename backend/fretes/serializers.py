@@ -24,8 +24,17 @@ class FreteCalculatorSerializer(serializers.Serializer):
         required=False, max_digits=6, decimal_places=2, min_value=0, default=DEFAULT_PERCENTUAL_LUCRO_ADICIONAL
     )
     peso_estimado_toneladas = serializers.DecimalField(
-        required=False, max_digits=10, decimal_places=2, min_value=0, default=DEFAULT_PESO_ESTIMADO_TONELADAS
+        required=False, max_digits=12, decimal_places=3, min_value=0, default=DEFAULT_PESO_ESTIMADO_TONELADAS
     )
+    valor_carga = serializers.DecimalField(required=False, max_digits=14, decimal_places=2, min_value=0, allow_null=True)
+    multiplicador_seguro = serializers.DecimalField(required=False, max_digits=10, decimal_places=4, min_value=0, default="2")
+    acrescimo_fixo_seguro = serializers.DecimalField(required=False, max_digits=14, decimal_places=2, min_value=0, default="6")
+    piso_seguro = serializers.DecimalField(required=False, max_digits=14, decimal_places=2, min_value=0, default="30")
+    proporcao_rctrc = serializers.DecimalField(required=False, max_digits=7, decimal_places=4, min_value=0, max_value=100, default="50")
+    precisao_percentual = serializers.IntegerField(required=False, min_value=1, max_value=10, default=6)
+    margem_adicional = serializers.DecimalField(required=False, max_digits=14, decimal_places=2, min_value=0, default="200")
+    pedagio = serializers.DecimalField(required=False, max_digits=14, decimal_places=2, min_value=0, default="0")
+    outras_despesas = serializers.DecimalField(required=False, max_digits=14, decimal_places=2, min_value=0, default="0")
 
     def validate(self, attrs):
         origem = attrs["cidade_origem"].strip().lower()
@@ -38,5 +47,13 @@ class FreteCalculatorSerializer(serializers.Serializer):
 
         if not attrs.get("adicionar_lucro_adicional"):
             attrs["percentual_lucro_adicional"] = 0
+
+        if attrs.get("valor_carga") is not None:
+            if attrs["valor_carga"] <= 0:
+                raise serializers.ValidationError("O valor da carga deve ser maior que zero.")
+            if not attrs.get("estado_origem") or not attrs.get("estado_destino"):
+                raise serializers.ValidationError(
+                    "As UFs de origem e destino são obrigatórias para calcular o seguro."
+                )
 
         return attrs

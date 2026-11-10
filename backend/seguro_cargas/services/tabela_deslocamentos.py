@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 import unicodedata
 
 
@@ -59,51 +60,78 @@ LOCALIDADE_LABELS = {
 
 
 LOCALIDADE_ALIASES = {
+    "ac": "acre",
     "acre": "acre",
     "alagoas": "alagoas",
+    "al": "alagoas",
     "amapa": "amapa",
+    "ap": "amapa",
     "amazonas": "amazonas",
+    "am": "amazonas",
     "bahia": "bahia",
+    "ba": "bahia",
     "ceara": "ceara",
+    "ce": "ceara",
     "d.f.(brasilia)": "distrito_federal_brasilia",
     "df(brasilia)": "distrito_federal_brasilia",
     "d.f. brasilia": "distrito_federal_brasilia",
     "distrito federal": "distrito_federal_brasilia",
+    "df": "distrito_federal_brasilia",
     "distrito federal brasilia": "distrito_federal_brasilia",
     "brasilia": "distrito_federal_brasilia",
     "esp.santo": "espirito_santo",
     "esp santo": "espirito_santo",
     "esp.santo ": "espirito_santo",
     "espirito santo": "espirito_santo",
+    "es": "espirito_santo",
     "goias": "goias",
+    "go": "goias",
     "maranhao": "maranhao",
+    "ma": "maranhao",
     "mato grosso": "mato_grosso",
+    "mt": "mato_grosso",
     "m. g. do sul": "mato_grosso_do_sul",
     "m.g. do sul": "mato_grosso_do_sul",
     "m g do sul": "mato_grosso_do_sul",
     "mato grosso do sul": "mato_grosso_do_sul",
+    "ms": "mato_grosso_do_sul",
     "minas gerais": "minas_gerais",
+    "mg": "minas_gerais",
     "para": "para",
+    "pa": "para",
     "paraiba": "paraiba",
+    "pb": "paraiba",
     "parana": "parana",
+    "pr": "parana",
     "pernambuco": "pernambuco",
+    "pe": "pernambuco",
     "piaui": "piaui",
+    "pi": "piaui",
     "rio de janeiro": "rio_de_janeiro",
+    "rj": "rio_de_janeiro",
     "r.g. do norte": "rio_grande_do_norte",
     "rg do norte": "rio_grande_do_norte",
     "rio grande do norte": "rio_grande_do_norte",
+    "rn": "rio_grande_do_norte",
     "r.g. do sul": "rio_grande_do_sul",
     "rg do sul": "rio_grande_do_sul",
     "rio grande do sul": "rio_grande_do_sul",
+    "rs": "rio_grande_do_sul",
     "rondonia": "rondonia",
+    "ro": "rondonia",
     "roraima": "roraima",
+    "rr": "roraima",
     "s.cantarina": "santa_catarina",
     "s cantarina": "santa_catarina",
     "santa catarina": "santa_catarina",
+    "sc": "santa_catarina",
     "sao paulo": "sao_paulo",
+    "sp": "sao_paulo",
     "sergipe": "sergipe",
+    "se": "sergipe",
     "tocantis": "tocantis",
     "tocantins": "tocantis",
+    "to": "tocantis",
     "urbano": "urbano",
 }
 
@@ -990,17 +1018,17 @@ def localidade_tem_taxa_fluvial(origem: str, destino: str) -> bool:
     return origem in LOCALIDADES_FLUVIAIS or destino in LOCALIDADES_FLUVIAIS
 
 
-def buscar_taxa_deslocamento(origem: str, destino: str) -> tuple[float, str, str, str]:
+def buscar_taxa_deslocamento(origem: str, destino: str) -> tuple[Decimal, str, str, str]:
     origem_canonica = normalizar_localidade(origem)
     destino_canonico = normalizar_localidade(destino)
 
     taxa = TABELA_DESLOCAMENTOS.get(origem_canonica, {}).get(destino_canonico)
     if taxa is not None:
-        return taxa, "origem-destino", origem_canonica, destino_canonico
+        return Decimal(str(taxa)), "origem-destino", origem_canonica, destino_canonico
 
     taxa_invertida = TABELA_DESLOCAMENTOS.get(destino_canonico, {}).get(origem_canonica)
     if taxa_invertida is not None:
-        return taxa_invertida, "destino-origem", origem_canonica, destino_canonico
+        return Decimal(str(taxa_invertida)), "destino-origem", origem_canonica, destino_canonico
 
     raise TaxaDeslocamentoNaoEncontradaError(
         "Taxa de deslocamento não cadastrada para a combinação informada. "

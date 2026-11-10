@@ -3,7 +3,10 @@ from __future__ import annotations
 from fretes.services.antt_table_service import ANTTTableService
 from fretes.services.geocoding_service import GeocodingService
 from fretes.services.routing_service import RoutingService
+from fretes.exceptions import FretesValidationError
 from fretes.utils.money import round_money, to_decimal
+from seguro_cargas.services.calculo_comercial import calcular_seguro_comercial
+from seguro_cargas.services.tabela_deslocamentos import LocalidadeSeguroError
 
 
 def _build_route_city_samples(route_points: list[dict], geocoding_service: GeocodingService, origem: dict, destino: dict) -> list[str]:
@@ -97,6 +100,34 @@ def calcular_frete(payload: dict, user=None) -> dict:
     route_points = rota.get("geometria_preview") or []
     cidades_rota = _build_route_city_samples(route_points=route_points, geocoding_service=geocoding_service, origem=origem, destino=destino)
 
+    seguro = None
+    valor_carga = payload.get("valor_carga")
+    margem_adicional = payload.get("margem_adicional", "200")
+    pedagio = payload.get("pedagio", "0")
+    outras_despesas = payload.get("outras_despesas", "0")
+    if valor_carga is not None:
+        try:
+            seguro = calcular_seguro_comercial(
+                origem=payload["estado_origem"],
+                destino=payload["estado_destino"],
+                valor_carga=valor_carga,
+                multiplicador=payload.get("multiplicador_seguro", "2"),
+                acrescimo_fixo=payload.get("acrescimo_fixo_seguro", "6"),
+                piso_comercial=payload.get("piso_seguro", "30"),
+                proporcao_rctrc=payload.get("proporcao_rctrc", "50"),
+                precisao_percentual=payload.get("precisao_percentual", 6),
+                piso_minimo_antt=valores_antt["valor_total"],
+                margem_adicional=margem_adicional,
+                pedagio=pedagio,
+                outras_despesas=outras_despesas,
+            )
+        except (LocalidadeSeguroError, ValueError) as exc:
+            raise FretesValidationError(str(exc)) from exc
+
+    valor_final_sem_seguro = round_money(
+        valores_antt["valor_total"] + to_decimal(margem_adicional) + to_decimal(pedagio) + to_decimal(outras_despesas)
+    )
+
     return {
         "origem": origem,
         "destino": destino,
@@ -143,6 +174,16 @@ def calcular_frete(payload: dict, user=None) -> dict:
                 if peso_estimado_toneladas > 0
                 else {}
             ),
+        },
+        "seguro_cargas": seguro,
+        "valor_final_sugerido": seguro["valor_final"] if seguro else {
+            "piso_minimo_antt": f"{valores_antt['valor_total']:.2f}",
+            "seguro_final": None,
+            "margem_adicional": f"{round_money(margem_adicional):.2f}",
+            "pedagio": f"{round_money(pedagio):.2f}",
+            "outras_despesas": f"{round_money(outras_despesas):.2f}",
+            "total": f"{valor_final_sem_seguro:.2f}",
+            "incompleto": True,
         },
         "parametros": {
             "quantidade_eixos": quantidade_eixos,

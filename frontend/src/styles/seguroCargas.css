@@ -41,7 +41,7 @@
 
 .seguro-cargas-grid {
   display: grid;
-  grid-template-columns: minmax(320px, 460px) minmax(320px, 1fr);
+  grid-template-columns: minmax(380px, 560px) minmax(320px, 1fr);
   gap: 24px;
 }
 
@@ -186,6 +186,120 @@
   color: #fecaca;
 }
 
+.seguro-cargas-alert.sucesso {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.28);
+  color: #a7f3d0;
+}
+
+.seguro-cargas-alert.aviso {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  color: #fde68a;
+}
+
+.seguro-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px dashed rgba(129, 140, 248, 0.5);
+  border-radius: 14px;
+  color: #c7d2fe;
+  cursor: pointer;
+}
+
+.seguro-upload input { display: none; }
+
+.seguro-fields-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.seguro-fields-two .span-two { grid-column: 1 / -1; }
+
+.seguro-config {
+  margin-top: 18px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
+  background: rgba(2, 6, 23, 0.28);
+}
+
+.seguro-config summary { cursor: pointer; font-weight: 700; color: #dbeafe; }
+.seguro-config[open] summary { margin-bottom: 14px; }
+.seguro-config p { color: #90a4bc; font-size: 13px; line-height: 1.5; }
+
+.seguro-link-button {
+  margin-top: 14px;
+  border: 0;
+  background: transparent;
+  color: #a5b4fc;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.seguro-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 12px;
+  color: #d8e3ef;
+  font-size: 14px;
+}
+
+.seguro-antt-checks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.seguro-antt-checks label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #c7d2e0;
+  font-size: 13px;
+}
+
+.seguro-results-stack { display: flex; flex-direction: column; gap: 18px; }
+
+.seguro-formula {
+  margin: 16px 0 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.08);
+  color: #c7d2fe;
+  font-size: 13px;
+}
+
+.percentual-copy {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(30, 41, 59, 0.72);
+}
+
+.percentual-copy span, .percentual-copy strong { display: block; }
+.percentual-copy span { color: #94a3b8; font-size: 12px; }
+.percentual-copy strong { margin-top: 5px; color: #f8fafc; font-size: 24px; }
+.percentual-copy button { border: 0; border-radius: 10px; padding: 10px 14px; background: #c7d2fe; color: #172554; font-weight: 700; cursor: pointer; }
+
+.seguro-breakdown { margin: 16px 0 0; }
+.seguro-breakdown div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid rgba(148, 163, 184, 0.1); }
+.seguro-breakdown dt { color: #9fb0c7; }
+.seguro-breakdown dd { margin: 0; color: #f8fafc; font-weight: 700; text-align: right; }
+
+.valor-final-card { border-color: rgba(52, 211, 153, 0.35); background: linear-gradient(145deg, rgba(6, 78, 59, 0.24), rgba(15, 23, 36, 0.92)); }
+.valor-final-card > span { color: #a7f3d0; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; }
+.valor-final-card > strong { display: block; margin-top: 8px; color: #ecfdf5; font-size: clamp(30px, 5vw, 46px); }
+.valor-final-card > p { margin: 16px 0 0; color: #9fb0c7; font-size: 13px; line-height: 1.6; }
+
 .seguro-cargas-resultados {
   display: flex;
   flex-direction: column;
@@ -274,8 +388,12 @@
 
   .seguro-cargas-actions,
   .seguro-cargas-summary,
-  .seguro-cargas-metrics {
+  .seguro-cargas-metrics,
+  .seguro-fields-two,
+  .seguro-antt-checks {
     grid-template-columns: 1fr;
     display: grid;
   }
+
+  .seguro-fields-two .span-two { grid-column: auto; }
 }
