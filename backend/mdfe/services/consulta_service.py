@@ -9,7 +9,7 @@ from .exceptions import MdfeCommunicationError, MdfeError, MdfeRejectionError
 from .portal_download_service import PortalNacionalMdfeClient
 from .sefaz_client import SefazClient, child_text, find_mdfe_payload
 from .validators import access_key_data, validate_access_key
-from .xml_service import build_non_closed_query, build_status_query, serialize, validate_schema
+from .xml_service import build_non_closed_query, build_status_query, secure_parse, serialize, validate_schema
 from .xml_import_service import MdfeXmlImportService
 
 
@@ -22,6 +22,23 @@ class DocumentStatus:
     closing_protocol: str = ""
     closing_datetime: str = ""
     raw_xml: str = ""
+
+
+def validate_status_payload(payload):
+    """Valida o retorno da SVRS, incluindo eventos retornados diretamente no envelope.
+
+    O XSD de consulta prevê eventos dentro de ``procEventoMDFe``, mas a SVRS também
+    devolve ``retEventoMDFe`` diretamente em algumas consultas. Cada evento direto é
+    validado pelo seu XSD oficial e removido somente da cópia usada para validar o
+    envelope. O XML original permanece intacto para extração e auditoria.
+    """
+    for event in payload.xpath(".//*[local-name()='retEventoMDFe']"):
+        validate_schema(event, "retEventoMDFe_v3.00.xsd")
+
+    validation_copy = secure_parse(serialize(payload))
+    for event in validation_copy.xpath("./*[local-name()='retEventoMDFe']"):
+        event.getparent().remove(event)
+    validate_schema(validation_copy, "retConsSitMDFe_v3.00.xsd")
 
 
 class ConsultaMdfeService:
@@ -178,7 +195,7 @@ class ConsultaMdfeService:
             uf_code=access_key[:2],
         )
         payload = find_mdfe_payload(response.root, "retConsSitMDFe")
-        validate_schema(payload, "retConsSitMDFe_v3.00.xsd")
+        validate_status_payload(payload)
         code = child_text(payload, "cStat")
         description = child_text(payload, "xMotivo")
         authorization_protocol = ""

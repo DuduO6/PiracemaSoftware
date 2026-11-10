@@ -98,6 +98,11 @@ def event_xml(code="135", reason="Evento registrado e vinculado ao MDF-e", proto
     return f'''<retEventoMDFe xmlns="http://www.portalfiscal.inf.br/mdfe" versao="3.00"><infEvento><tpAmb>2</tpAmb><verAplic>TESTE</verAplic><cOrgao>31</cOrgao><cStat>{code}</cStat><xMotivo>{reason}</xMotivo>{optional}</infEvento></retEventoMDFe>'''.encode()
 
 
+def status_xml_with_direct_event():
+    event = event_xml().decode("utf-8")
+    return f'''<retConsSitMDFe xmlns="http://www.portalfiscal.inf.br/mdfe" versao="3.00"><tpAmb>2</tpAmb><verAplic>TESTE</verAplic><cStat>132</cStat><xMotivo>MDF-e encerrado</xMotivo><cUF>31</cUF>{event}</retConsSitMDFe>'''.encode()
+
+
 def processed_mdfe_xml(key, private_key, certificate, *, driver_name="João da Silva", driver_cpf="52998224725", protocol="935260000000000"):
     qname = lambda name: etree.QName(MDFE_NS, name)
     root = etree.Element(qname("mdfeProc"), nsmap={None: MDFE_NS}, versao="3.00")
@@ -304,6 +309,36 @@ class MdfeTests(TestCase):
         self.manifest.refresh_from_db()
         self.assertEqual(self.manifest.situacao, "ABERTO")
         self.assertEqual(ConsultaManifestos.objects.first().estado, "ERRO")
+
+    @patch("mdfe.services.consulta_service.SefazClient")
+    def test_consulta_aceita_retorno_de_evento_direto_da_svrs(self, client_class):
+        client_class.return_value.send.return_value = self.sefaz_response(status_xml_with_direct_event())
+
+        result = ConsultaMdfeService(self.configuration).document_status(self.manifest.chave)
+
+        self.assertEqual(result.code, "132")
+        self.assertEqual(result.closing_protocol, "935260000000001")
+        self.assertEqual(result.closing_datetime, "2026-11-10T10:00:00-03:00")
+
+    @patch("mdfe.services.encerramento_service.SefazClient")
+    @patch("mdfe.services.consulta_service.SefazClient")
+    def test_encerramento_ja_registrado_na_svrs_nao_e_retransmitido(self, status_client, event_client):
+        status_client.return_value.send.return_value = self.sefaz_response(status_xml_with_direct_event())
+
+        operation = EncerramentoMdfeService(self.configuration).close(
+            self.manifest,
+            user=self.operator,
+            uf="MG",
+            municipality_code="3106200",
+            closing_date=date(2026, 11, 10),
+            idempotency_key="encerramento-ja-registrado",
+        )
+
+        self.assertEqual(operation.estado, "HOMOLOGADO")
+        self.assertEqual(operation.protocolo, "935260000000001")
+        event_client.assert_not_called()
+        self.manifest.refresh_from_db()
+        self.assertEqual(self.manifest.situacao, "ENCERRADO")
 
     def test_mdfe_ja_encerrado_e_idempotente(self):
         self.manifest.situacao = "ENCERRADO"
