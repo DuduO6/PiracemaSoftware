@@ -1,0 +1,907 @@
+/*
+ * Camada visual compartilhada.
+ * Mantém as regras de negócio e o markup das páginas existentes e unifica
+ * superfícies, tipografia, controles e estados com a linguagem da tela MDF-e.
+ */
+
+/* Estrutura das páginas protegidas */
+.dashboard,
+.caminhoes-container,
+.motoristas-container,
+.viagens-container,
+.despesas-container,
+.acertos-container,
+.novo-container,
+.detalhes-container,
+.frete-page,
+.seguro-cargas-page,
+.account-page {
+  width: 100%;
+  min-height: 100vh;
+  padding: 32px;
+  overflow-x: hidden;
+  color: var(--app-text);
+  background: var(--app-background);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.dashboard > *,
+.caminhoes-container > *,
+.motoristas-container > *,
+.viagens-container > *,
+.despesas-container > *,
+.acertos-container > *,
+.novo-container > *,
+.detalhes-container > *,
+.frete-page > *,
+.seguro-cargas-page > *,
+.account-page > * {
+  width: min(100%, 1680px);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.titulo,
+.despesas-titulo,
+.dashboard-header h1,
+.frete-hero h1,
+.seguro-cargas-hero h1,
+.account-card h1 {
+  margin: 0;
+  color: var(--app-text);
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -.025em;
+  text-transform: none;
+}
+
+.titulo,
+.despesas-titulo { margin-bottom: 24px; }
+
+.dashboard-header,
+.frete-hero,
+.seguro-cargas-hero {
+  margin-bottom: 22px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.dashboard-header .subtitle,
+.frete-description,
+.seguro-cargas-description,
+.frete-kicker,
+.seguro-cargas-kicker {
+  color: var(--app-text-secondary);
+}
+
+.frete-kicker,
+.seguro-cargas-kicker {
+  margin-bottom: 7px;
+  color: var(--app-primary);
+}
+
+/* Controles e formulários */
+.layout-wrapper input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.layout-wrapper select,
+.layout-wrapper textarea {
+  min-height: 42px;
+  color: var(--app-text);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border-strong);
+  border-radius: 9px;
+  box-shadow: none;
+  font-family: inherit;
+}
+
+.layout-wrapper input::placeholder,
+.layout-wrapper textarea::placeholder { color: var(--app-text-soft); }
+
+.layout-wrapper input:focus,
+.layout-wrapper select:focus,
+.layout-wrapper textarea:focus {
+  border-color: var(--app-primary);
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-primary) 16%, transparent);
+  transform: none;
+}
+
+.layout-wrapper label,
+.form-label,
+.form-group label {
+  color: var(--app-text-secondary);
+  font-weight: 700;
+}
+
+.white-btn,
+.btn-submit,
+.btn-salvar,
+.btn-cancelar,
+.btn-editar,
+.btn-remover,
+.btn-pagar,
+.btn-visualizar,
+.btn-adicionar-vale,
+.btn-descontar-vale,
+.btn-editar-mini,
+.btn-remover-mini,
+.btn-visualizar-mini,
+.btn-salvar-mini,
+.btn-cancelar-mini,
+.frete-button,
+.frete-secondary-button,
+.seguro-cargas-button,
+.account-card button,
+.pagination-btn,
+.btn-nav {
+  min-height: 40px;
+  padding: 9px 15px;
+  color: var(--app-text);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border-strong);
+  border-radius: 9px;
+  box-shadow: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.2;
+  text-transform: none;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
+}
+
+.white-btn:first-child,
+.white-btn.salvar-btn,
+.btn-adicionar-vale,
+.btn-submit,
+.btn-salvar,
+.frete-button,
+.seguro-cargas-button:not(.secondary),
+.account-card button {
+  color: var(--app-primary-contrast);
+  background: var(--app-primary);
+  border-color: var(--app-primary);
+}
+
+.white-btn:hover,
+.btn-submit:hover,
+.btn-salvar:hover,
+.btn-cancelar:hover,
+.btn-editar:hover,
+.btn-remover:hover,
+.btn-pagar:hover,
+.btn-visualizar:hover,
+.btn-adicionar-vale:hover,
+.btn-descontar-vale:hover,
+.btn-editar-mini:hover,
+.btn-remover-mini:hover,
+.btn-visualizar-mini:hover,
+.btn-salvar-mini:hover,
+.btn-cancelar-mini:hover,
+.frete-button:hover,
+.frete-secondary-button:hover,
+.seguro-cargas-button:hover,
+.account-card button:hover:not(:disabled),
+.btn-nav:hover {
+  transform: translateY(-1px);
+  color: var(--app-text);
+  background: var(--app-surface-muted);
+  border-color: var(--app-border-strong);
+  box-shadow: none;
+}
+
+.white-btn:first-child:hover,
+.white-btn.salvar-btn:hover,
+.btn-adicionar-vale:hover,
+.btn-submit:hover,
+.btn-salvar:hover,
+.frete-button:hover,
+.seguro-cargas-button:not(.secondary):hover,
+.account-card button:hover:not(:disabled) {
+  color: var(--app-primary-contrast);
+  background: var(--app-primary-hover);
+  border-color: var(--app-primary-hover);
+}
+
+.btn-remover,
+.btn-cancelar,
+.btn-remover-mini,
+.btn-cancelar-mini,
+.white-btn.active-remover {
+  color: var(--app-danger);
+  background: var(--app-danger-soft);
+  border-color: color-mix(in srgb, var(--app-danger) 28%, var(--app-border));
+}
+
+.btn-pagar {
+  color: var(--app-success);
+  background: var(--app-success-soft);
+  border-color: color-mix(in srgb, var(--app-success) 28%, var(--app-border));
+}
+
+.btn-descontar-vale,
+.btn-salvar-mini {
+  color: var(--app-success);
+  background: var(--app-success-soft);
+  border-color: color-mix(in srgb, var(--app-success) 28%, var(--app-border));
+}
+
+.white-btn.active {
+  color: var(--app-warning);
+  background: var(--app-warning-soft);
+  border-color: color-mix(in srgb, var(--app-warning) 28%, var(--app-border));
+}
+
+button:disabled { cursor: not-allowed; opacity: .58; }
+
+.btn-row {
+  display: flex;
+  gap: 9px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.modo-edicao-aviso,
+.modo-remocao-aviso {
+  margin: 0 0 18px;
+  padding: 11px 13px;
+  text-align: left;
+  border: 1px solid;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.modo-edicao-aviso {
+  color: var(--app-warning);
+  background: var(--app-warning-soft);
+  border-color: color-mix(in srgb, var(--app-warning) 28%, var(--app-border));
+}
+
+.modo-remocao-aviso {
+  color: var(--app-danger);
+  background: var(--app-danger-soft);
+  border-color: color-mix(in srgb, var(--app-danger) 28%, var(--app-border));
+}
+
+/* Listas de motoristas e veículos */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.caminhao-card,
+.motorista-card {
+  min-height: 176px;
+  padding: 20px;
+  color: var(--app-text);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  box-shadow: var(--app-shadow-sm);
+}
+
+.caminhao-card:hover,
+.motorista-card:hover,
+.caminhao-card.editavel:hover,
+.motorista-card.editavel:hover {
+  transform: translateY(-2px);
+  background: var(--app-surface-elevated);
+  border: 1px solid color-mix(in srgb, var(--app-primary) 35%, var(--app-border));
+  box-shadow: var(--app-shadow-md);
+}
+
+.caminhao-card.removivel:hover,
+.motorista-card.removivel:hover {
+  border-color: var(--app-danger);
+  box-shadow: none;
+}
+
+.caminhao-nome,
+.motorista-nome {
+  margin: 0 0 18px;
+  color: var(--app-text);
+  font-size: 19px;
+  line-height: 1.25;
+}
+
+.caminhao-card p,
+.motorista-card p {
+  margin: 5px 0;
+  color: var(--app-text-secondary);
+  font-size: 13px;
+}
+
+.caminhao-card p strong,
+.motorista-card p strong { color: var(--app-text); }
+
+/* Formulários de cadastro e páginas de detalhes */
+.form-card,
+.info-card {
+  width: min(100%, 920px);
+  padding: 24px;
+  color: var(--app-text);
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  box-shadow: var(--app-shadow-sm);
+}
+
+.form-card label { color: var(--app-text-secondary); font-size: 13px; font-weight: 700; }
+.form-card .input { margin: 6px 0 17px; padding: 10px 12px; font-size: 14px; }
+.form-card .file-input { color: var(--app-text-secondary); }
+.subtitulo { margin: 22px 0 14px; color: var(--app-text); font-size: 18px; }
+.carreta-card,
+.crlv-card-modal,
+.carreta-item {
+  padding: 16px;
+  color: var(--app-text);
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+}
+
+.voltar-btn { margin-bottom: 18px; }
+.card-titulo { margin: 0 0 24px; padding-bottom: 16px; color: var(--app-text); border-bottom: 1px solid var(--app-border); font-size: 24px; }
+.info-section { margin-bottom: 26px; }
+.section-titulo { margin-bottom: 15px; color: var(--app-text); font-size: 17px; }
+.info-label { color: var(--app-text-secondary); font-size: 12px; }
+.info-value { color: var(--app-text); font-size: 15px; }
+.carreta-numero { color: var(--app-text); }
+.no-carretas { color: var(--app-text-soft); }
+.idade-preview-inline { color: var(--app-text-secondary); }
+.caminhao-vinculado,
+.vales-resumo {
+  color: var(--app-text);
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+}
+.caminhao-header,
+.carretas-resumo { border-color: var(--app-border); }
+.caminhao-nome-destaque,
+.carretas-titulo,
+.total-vales { color: var(--app-text); }
+.total-vales-descontados,
+.modal-descricao,
+.no-caminhao,
+.no-vales { color: var(--app-text-secondary); }
+.total-vales strong { color: var(--app-success); }
+
+/* Dashboard */
+.dashboard-header { align-items: flex-start; }
+.user-info {
+  color: var(--app-text-secondary);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+}
+
+.user-info:hover { background: var(--app-surface-muted); border-color: var(--app-border-strong); }
+.avatar,
+.avatar-small,
+.avatar-large { color: var(--app-primary-contrast); background: var(--app-primary); }
+
+.periodo-container,
+.content-area,
+.chart-container {
+  color: var(--app-text);
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  box-shadow: var(--app-shadow-sm);
+}
+
+.periodo-container { margin-bottom: 18px; padding: 14px 16px; }
+.periodo-container label { color: var(--app-text-secondary); }
+.periodo-input,
+.periodo-label,
+.periodo-btn { color: var(--app-text); background: var(--app-surface); border-color: var(--app-border-strong); }
+.periodo-label { color: var(--app-text-secondary); }
+.periodo-btn:hover { color: var(--app-primary); background: var(--app-primary-soft); }
+.periodo-dropdown { background: var(--app-surface-elevated); border-color: var(--app-border); box-shadow: var(--app-shadow-md); }
+.dropdown-option { color: var(--app-text); }
+.dropdown-option:hover,
+.dropdown-option.active { color: var(--app-primary); background: var(--app-primary-soft); }
+
+.cards-row { gap: 14px; margin-bottom: 18px; }
+.info-block {
+  min-height: 124px;
+  padding: 18px;
+  color: var(--app-text);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  box-shadow: var(--app-shadow-sm);
+}
+
+.info-block::before { display: none; }
+.info-block:hover { transform: translateY(-2px); border-color: var(--app-border-strong); box-shadow: var(--app-shadow-md); }
+.block-icon { display: grid; width: 42px; height: 42px; place-items: center; background: var(--app-primary-soft); border-radius: 11px; font-size: 22px; }
+.info-block h2 { color: var(--app-text-secondary); font-size: 12px; font-weight: 750; }
+.info-block .value { color: var(--app-text); font-size: 27px; }
+.info-block .value.red { color: var(--app-danger); }
+.period-label { color: var(--app-text-soft); }
+
+.content-area { padding: 20px; }
+.section-header { border-bottom-color: var(--app-border); }
+.section-header h3,
+.card-top h4,
+.vale-info h4 { color: var(--app-text); }
+.badge,
+.placa { color: var(--app-primary); background: var(--app-primary-soft); border-color: color-mix(in srgb, var(--app-primary) 25%, var(--app-border)); }
+.view-controls,
+.vale-card,
+.caminhao-dashboard-card,
+.valores-grid > div { background: var(--app-surface-muted); border-color: var(--app-border); }
+.view-btn { color: var(--app-text-secondary); }
+.view-btn.active { color: var(--app-primary); background: var(--app-primary-soft); }
+.vale-card:hover,
+.caminhao-dashboard-card:hover { transform: translateY(-2px); border-color: var(--app-border-strong); box-shadow: var(--app-shadow-md); }
+.vale-card::before,
+.caminhao-dashboard-card::before { display: none; }
+.vale-header,
+.card-top,
+.footer-info { border-color: var(--app-border); }
+.muted,
+.vale-footer .label,
+.footer-info { color: var(--app-text-secondary); }
+.muted strong { color: var(--app-text); }
+
+/* Tabelas */
+.table-section,
+.table-wrapper,
+.acertos-container > .table-wrapper {
+  padding: 0;
+  overflow-x: auto;
+  color: var(--app-text);
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  box-shadow: var(--app-shadow-sm);
+}
+
+.viagens-table,
+.table-custom,
+.acertos-table,
+.balanco-table,
+.vales-table,
+.tabela-modal,
+.resumo-table,
+.historico-descontos-table { color: var(--app-text); background: transparent; }
+
+.viagens-table th,
+.table-custom th,
+.acertos-table th,
+.balanco-table th,
+.vales-table th,
+.tabela-modal th,
+.resumo-table th,
+.historico-descontos-table th {
+  padding: 11px 14px;
+  color: var(--app-text-secondary);
+  background: var(--app-surface-muted);
+  border-bottom: 1px solid var(--app-border);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .07em;
+}
+
+.viagens-table td,
+.table-custom td,
+.acertos-table td,
+.balanco-table td,
+.vales-table td,
+.tabela-modal td,
+.resumo-table td,
+.historico-descontos-table td {
+  padding: 13px 14px;
+  color: var(--app-text);
+  background: transparent;
+  border-bottom: 1px solid var(--app-border);
+  font-size: 12px;
+}
+
+.viagens-table tbody tr:hover,
+.table-custom tr:hover,
+.acertos-table tbody tr:hover,
+.balanco-table tbody tr:hover,
+.vales-table tbody tr:hover { background: color-mix(in srgb, var(--app-primary) 5%, transparent); }
+
+.status-badge,
+.categoria-badge,
+.filtro-badge {
+  min-width: 0;
+  padding: 4px 8px;
+  color: var(--app-text-secondary);
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.status-pago { color: var(--app-success); background: var(--app-success-soft); border-color: color-mix(in srgb, var(--app-success) 26%, var(--app-border)); }
+.status-pendente { color: var(--app-warning); background: var(--app-warning-soft); border-color: color-mix(in srgb, var(--app-warning) 26%, var(--app-border)); }
+.status-vencido { color: var(--app-danger); background: var(--app-danger-soft); border-color: color-mix(in srgb, var(--app-danger) 26%, var(--app-border)); }
+.status-cancelado { color: var(--app-text-secondary); background: var(--app-surface-muted); }
+.tipo-fixa,
+.tipo-variavel,
+.tipo-recorrente { color: var(--app-info); background: var(--app-info-soft); }
+.valor-cell { color: var(--app-text); }
+.parcela-info { color: var(--app-text-soft); }
+
+.info-viagens,
+.info-acertos { color: var(--app-text-secondary); }
+.total-text { font-size: 13px; color: var(--app-text-secondary); }
+.total-valor { color: var(--app-success); font-size: 24px; }
+.total-desconto-cte { color: var(--app-danger); }
+
+/* Despesas */
+.navegacao {
+  color: var(--app-text);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+}
+
+.card {
+  color: var(--app-text);
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  box-shadow: var(--app-shadow-sm);
+}
+
+.card-total { border-left: 3px solid var(--app-info); }
+.card-pago { border-left: 3px solid var(--app-success); }
+.card-pendente { border-left: 3px solid var(--app-warning); }
+.card-label { color: var(--app-text-secondary); }
+.card-value { color: var(--app-text); }
+
+.filtros-section {
+  padding: 18px;
+  background: var(--app-surface-elevated);
+  border-color: var(--app-border);
+  border-radius: 14px;
+}
+
+.filtro-label,
+.filtros-label { color: var(--app-text-secondary); }
+.filtro-select { color: var(--app-text); background: var(--app-surface); border-color: var(--app-border-strong); }
+.filtro-select:hover,
+.filtro-select:focus { color: var(--app-text); background: var(--app-surface); border-color: var(--app-primary); }
+.filtro-select option { color: var(--app-text); background: var(--app-surface); }
+.filtros-aplicados { border-color: var(--app-border); }
+.filtro-remover { color: var(--app-primary); background: var(--app-primary-soft); }
+
+/* Modais compartilhados */
+.modal-overlay {
+  z-index: 2000;
+  padding: 20px;
+  background: rgba(3, 13, 18, .58);
+  backdrop-filter: blur(4px);
+}
+
+.modal-edicao,
+.modal-custom,
+.modal-acerto-detalhes,
+.modal-vale,
+.modal-content {
+  width: min(680px, 100%);
+  max-height: min(90vh, 840px);
+  padding: 22px;
+  overflow-y: auto;
+  color: var(--app-text);
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(2, 12, 18, .24);
+}
+
+.modal-desconto-vale,
+.modal-historico-vales {
+  width: min(680px, 100%);
+  max-height: min(90vh, 840px);
+  padding: 22px;
+  overflow-y: auto;
+  color: var(--app-text);
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(2, 12, 18, .24);
+}
+.modal-historico-vales { width: min(880px, 100%); }
+
+.modal-edicao h2,
+.modal-title,
+.modal-header h2,
+.modal-edicao h3,
+.modal-edicao h4 { color: var(--app-text); }
+.modal-header { border-color: var(--app-border); }
+.subtitulo-modal { color: var(--app-text); border-color: var(--app-primary); }
+.cte-preview-box,
+.vales-acerto-box,
+.importacao-cte-box,
+.acerto-info-box,
+.acerto-section,
+.acerto-resumo,
+.preview-grid div,
+.vale-acerto-item {
+  color: var(--app-text);
+  background: var(--app-surface-muted);
+  border-color: var(--app-border);
+  border-radius: 10px;
+}
+.cte-preview-box span,
+.form-help-text { color: var(--app-text-secondary); }
+.cte-preview-box strong,
+.confirmacao-texto,
+.form-group-checkbox label { color: var(--app-text); }
+.modal-buttons { gap: 9px; }
+.btn-fechar { color: var(--app-text-secondary); background: transparent; }
+
+/* Frete e seguro */
+.frete-layout,
+.seguro-cargas-grid { gap: 18px; }
+.frete-card,
+.seguro-cargas-card {
+  padding: 22px;
+  color: var(--app-text);
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  box-shadow: var(--app-shadow-sm);
+  backdrop-filter: none;
+}
+
+.frete-card-header h2,
+.seguro-cargas-card-header h2,
+.frete-commercial-panel h3,
+.frete-route-panel h3,
+.frete-sugestoes h3 { color: var(--app-text); }
+.frete-card-header span,
+.seguro-cargas-card-header span,
+.frete-grid small,
+.frete-check small,
+.frete-detail-grid dt,
+.frete-route-panel-header p,
+.seguro-config p,
+.seguro-breakdown dt { color: var(--app-text-secondary); }
+.frete-grid label,
+.frete-check,
+.seguro-cargas-fields label,
+.seguro-toggle { color: var(--app-text-secondary); }
+.frete-check,
+.frete-insurance-config,
+.frete-commercial-panel,
+.frete-highlights article,
+.frete-detail-grid section,
+.frete-route-panel,
+.frete-sugestoes,
+.seguro-config,
+.seguro-antt-checks label,
+.seguro-cargas-summary div,
+.seguro-cargas-metrics article,
+.seguro-cargas-total,
+.percentual-copy {
+  color: var(--app-text);
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+}
+
+.frete-autocomplete-list { background: var(--app-surface-elevated); border-color: var(--app-border); box-shadow: var(--app-shadow-md); }
+.frete-autocomplete-item { color: var(--app-text); }
+.frete-autocomplete-item:hover { background: var(--app-primary-soft); }
+.frete-xml-upload,
+.seguro-upload { color: var(--app-primary); border-color: color-mix(in srgb, var(--app-primary) 48%, var(--app-border)); border-radius: 10px; }
+.frete-insurance-config summary,
+.seguro-config summary,
+.seguro-link-button { color: var(--app-primary); }
+.frete-commercial-grid article,
+.frete-percentual-row,
+.frete-route-roads span,
+.frete-route-cities span,
+.frete-sugestoes-grid article,
+.seguro-formula { color: var(--app-text); background: var(--app-surface); border: 1px solid var(--app-border); }
+.frete-commercial-grid span,
+.frete-percentual-row span,
+.frete-percentual-row small,
+.frete-commercial-breakdown dt,
+.frete-sugestoes-grid span,
+.seguro-cargas-summary strong,
+.seguro-cargas-metrics span,
+.seguro-cargas-total span,
+.percentual-copy span { color: var(--app-text-secondary); }
+.frete-commercial-grid strong,
+.frete-percentual-row strong,
+.frete-commercial-breakdown dd,
+.frete-highlights strong,
+.frete-detail-grid dd,
+.frete-sugestoes-grid strong,
+.seguro-cargas-summary span,
+.seguro-cargas-metrics strong,
+.seguro-cargas-total strong,
+.percentual-copy strong,
+.seguro-breakdown dd { color: var(--app-text); }
+.frete-commercial-breakdown div,
+.frete-detail-grid dl div,
+.seguro-breakdown div { border-color: var(--app-border); }
+.frete-percentual-row button,
+.percentual-copy button { color: var(--app-primary-contrast); background: var(--app-primary); }
+.frete-final-card,
+.valor-final-card { color: var(--app-text); background: var(--app-success-soft); border-color: color-mix(in srgb, var(--app-success) 32%, var(--app-border)); }
+.frete-final-card > span,
+.valor-final-card > span { color: var(--app-success); }
+.frete-final-card > strong,
+.valor-final-card > strong { color: var(--app-text); }
+.frete-final-card > p,
+.valor-final-card > p { color: var(--app-text-secondary); }
+.frete-empty-state,
+.frete-route-empty,
+.seguro-cargas-empty { color: var(--app-text-secondary); border-color: var(--app-border-strong); }
+
+.frete-alert.erro,
+.seguro-cargas-alert.erro,
+.account-message.error { color: var(--app-danger); background: var(--app-danger-soft); border-color: color-mix(in srgb, var(--app-danger) 30%, var(--app-border)); }
+.frete-alert.aviso,
+.seguro-cargas-alert.aviso { color: var(--app-warning); background: var(--app-warning-soft); border-color: color-mix(in srgb, var(--app-warning) 30%, var(--app-border)); }
+.frete-alert.sucesso,
+.seguro-cargas-alert.sucesso,
+.account-message.success { color: var(--app-success); background: var(--app-success-soft); border-color: color-mix(in srgb, var(--app-success) 30%, var(--app-border)); }
+
+/* Minha conta */
+.account-card {
+  width: min(760px, 100%);
+  padding: 28px;
+  color: var(--app-text);
+  background: var(--app-surface-elevated);
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  box-shadow: var(--app-shadow-sm);
+}
+.account-card header span { color: var(--app-primary); }
+.account-card header p,
+.account-password-section p,
+.account-card small,
+.account-loading { color: var(--app-text-secondary); }
+.account-card label { color: var(--app-text-secondary); }
+.account-card input { color: var(--app-text); background: var(--app-surface); border-color: var(--app-border-strong); }
+.account-password-section { border-color: var(--app-border); }
+.account-password-section h2 { color: var(--app-text); }
+
+/* Paginação e estados */
+.pagination-container { color: var(--app-text-secondary); }
+.pagination-info,
+.pagination-page { color: var(--app-text-secondary); }
+.pagination-btn { color: var(--app-text); background: var(--app-surface); border: 1px solid var(--app-border); border-radius: 8px; }
+.empty-state,
+.loading-state { color: var(--app-text-secondary); }
+.spinner { border-color: var(--app-primary-soft); border-top-color: var(--app-primary); }
+
+@media (max-width: 900px) {
+  .dashboard,
+  .caminhoes-container,
+  .motoristas-container,
+  .viagens-container,
+  .despesas-container,
+  .acertos-container,
+  .novo-container,
+  .detalhes-container,
+  .frete-page,
+  .seguro-cargas-page,
+  .account-page { padding: 76px 18px 24px; }
+
+  .cards-grid,
+  .cards-row { grid-template-columns: 1fr; }
+  .frete-layout,
+  .seguro-cargas-grid { grid-template-columns: 1fr; }
+  .btn-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .btn-row .white-btn { width: 100%; }
+  .table-section { padding: 0; }
+}
+
+@media (max-width: 640px) {
+  .dashboard,
+  .caminhoes-container,
+  .motoristas-container,
+  .viagens-container,
+  .despesas-container,
+  .acertos-container,
+  .novo-container,
+  .detalhes-container,
+  .frete-page,
+  .seguro-cargas-page,
+  .account-page { padding: 72px 14px 20px; }
+
+  .caminhoes-container > .titulo,
+  .motoristas-container > .titulo,
+  .viagens-container > .titulo,
+  .despesas-container > .despesas-titulo,
+  .acertos-container > .titulo,
+  .novo-container > .titulo,
+  .detalhes-container > .titulo,
+  .dashboard > .dashboard-header,
+  .frete-page > .frete-hero,
+  .seguro-cargas-page > .seguro-cargas-hero {
+    width: auto;
+    margin: -72px -14px 18px;
+    padding: 76px 14px 20px;
+    color: #F4FAFA;
+    background: #103D46;
+    border: 0;
+  }
+  [data-theme="dark"] .caminhoes-container > .titulo,
+  [data-theme="dark"] .motoristas-container > .titulo,
+  [data-theme="dark"] .viagens-container > .titulo,
+  [data-theme="dark"] .despesas-container > .despesas-titulo,
+  [data-theme="dark"] .acertos-container > .titulo,
+  [data-theme="dark"] .novo-container > .titulo,
+  [data-theme="dark"] .detalhes-container > .titulo,
+  [data-theme="dark"] .dashboard > .dashboard-header,
+  [data-theme="dark"] .frete-page > .frete-hero,
+  [data-theme="dark"] .seguro-cargas-page > .seguro-cargas-hero { background: #0B2029; }
+  .caminhoes-container > .titulo,
+  .motoristas-container > .titulo,
+  .viagens-container > .titulo,
+  .despesas-container > .despesas-titulo,
+  .acertos-container > .titulo,
+  .novo-container > .titulo,
+  .detalhes-container > .titulo,
+  .dashboard > .dashboard-header h1,
+  .frete-page > .frete-hero h1,
+  .seguro-cargas-page > .seguro-cargas-hero h1 { color: #F4FAFA; }
+  .dashboard > .dashboard-header .subtitle,
+  .frete-page > .frete-hero .frete-description,
+  .seguro-cargas-page > .seguro-cargas-hero .seguro-cargas-description { color: #B7CDD1; }
+  .frete-page > .frete-hero .frete-kicker,
+  .seguro-cargas-page > .seguro-cargas-hero .seguro-cargas-kicker { color: #71DCCB; }
+
+  .titulo,
+  .despesas-titulo { margin-bottom: 18px; }
+  .btn-row { grid-template-columns: 1fr; }
+  .form-card,
+  .info-card,
+  .frete-card,
+  .seguro-cargas-card,
+  .account-card { padding: 18px 16px; }
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal-edicao,
+  .modal-custom,
+  .modal-acerto-detalhes,
+  .modal-vale,
+  .modal-content {
+    width: 100%;
+    max-width: none;
+    max-height: 92vh;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 18px 18px 0 0;
+  }
+  .modal-desconto-vale,
+  .modal-historico-vales {
+    width: 100%;
+    max-width: none;
+    max-height: 92vh;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 18px 18px 0 0;
+  }
+  .modal-buttons { display: grid; grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}

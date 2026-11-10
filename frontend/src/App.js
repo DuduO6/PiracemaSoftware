@@ -19,6 +19,7 @@ import FreteCalculator from "./pages/FreteCalculator.jsx";
 import ManifestosMdfe from "./pages/ManifestosMdfe.jsx";
 import MinhaConta from "./pages/MinhaConta.jsx";
 import { ThemeProvider } from "./theme/ThemeContext.jsx";
+import "./styles/designSystem.css";
 
 function App() {
   useEffect(() => {

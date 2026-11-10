@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import api from "../api/api";  
 import '../styles/auth.css';
+import ThemeControl from './ThemeControl';
+import UiIcon from './UiIcon';
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -12,6 +15,9 @@ function Register() {
   });
 
   const [errors, setErrors] = useState({});
+  const [showPasswords, setShowPasswords] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
 
   const validateForm = () => {
     const newErrors = {};
@@ -50,6 +56,8 @@ function Register() {
 
     if (!validateForm()) return;
 
+    setIsSubmitting(true);
+
     try {
       await api.post("/auth/register/", {
         username: formData.username,
@@ -59,11 +67,13 @@ function Register() {
       });
 
       alert("Cadastro realizado com sucesso!");
-      window.location.href = "/login";
+      navigate('/login', { replace: true });
 
     } catch (error) {
       console.error("Erro:", error);
       alert("Erro ao registrar. Confira os dados e tente novamente.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -85,77 +95,131 @@ function Register() {
 
   return (
     <div className="auth-container">
-      <form onSubmit={handleSubmit} className="auth-form register-form">
+      <div className="auth-theme-control">
+        <ThemeControl compact />
+      </div>
 
-        <div className="form-group">
-          <label>Username:</label>
-          <input
-            type="text"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            className={`form-input ${errors.username ? 'input-error' : ''}`}
-          />
-          {errors.username && <span className="error-message">{errors.username}</span>}
-        </div>
+      <main className="auth-shell auth-shell-register">
+        <section className="auth-card auth-card-register" aria-labelledby="register-title">
+          <header className="auth-card-header">
+            <h1 id="register-title">Crie sua conta</h1>
+          </header>
 
-        <div className="form-group">
-          <label>E-mail:</label>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            className={`form-input ${errors.email ? 'input-error' : ''}`}
-          />
-          {errors.email && <span className="error-message">{errors.email}</span>}
-        </div>
+          <form onSubmit={handleSubmit} className="auth-card-form" noValidate>
+            <div className="auth-register-grid">
+              <AuthField
+                id="register-username"
+                label="Nome de usuário"
+                name="username"
+                value={formData.username}
+                onChange={handleChange}
+                error={errors.username}
+                autoComplete="username"
+                required
+              />
+              <AuthField
+                id="register-email"
+                label="E-mail"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleChange}
+                error={errors.email}
+                autoComplete="email"
+                required
+              />
+              <AuthField
+                id="register-cnpj"
+                label="CNPJ (opcional)"
+                name="cnpj"
+                value={formData.cnpj}
+                onChange={handleChange}
+                error={errors.cnpj}
+                autoComplete="off"
+                inputMode="numeric"
+                maxLength="18"
+              />
+              <AuthField
+                id="register-password"
+                label="Senha"
+                name="password"
+                type={showPasswords ? 'text' : 'password'}
+                value={formData.password}
+                onChange={handleChange}
+                error={errors.password}
+                autoComplete="new-password"
+                required
+                passwordAction
+                showPassword={showPasswords}
+                onTogglePassword={() => setShowPasswords((current) => !current)}
+              />
+              <AuthField
+                id="register-confirm-password"
+                label="Confirme sua senha"
+                name="confirmPassword"
+                type={showPasswords ? 'text' : 'password'}
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                error={errors.confirmPassword}
+                autoComplete="new-password"
+                required
+                passwordAction
+                showPassword={showPasswords}
+                onTogglePassword={() => setShowPasswords((current) => !current)}
+              />
+            </div>
 
-        <div className="form-group">
-          <label>CNPJ (opcional):</label>
-          <input
-            type="text"
-            name="cnpj"
-            value={formData.cnpj}
-            onChange={handleChange}
-            placeholder="00.000.000/0000-00"
-            maxLength="18"
-            className={`form-input ${errors.cnpj ? 'input-error' : ''}`}
-          />
-          {errors.cnpj && <span className="error-message">{errors.cnpj}</span>}
-        </div>
+            <div className="auth-actions">
+              <button type="submit" className="auth-submit" disabled={isSubmitting}>
+                {isSubmitting ? 'CADASTRANDO…' : 'CRIAR CONTA'}
+              </button>
+              <p>
+                Já possui uma conta?
+                <Link to="/login">Voltar ao login</Link>
+              </p>
+            </div>
+          </form>
+        </section>
+      </main>
+    </div>
+  );
+}
 
-        <div className="form-group">
-          <label>Senha:</label>
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            className={`form-input ${errors.password ? 'input-error' : ''}`}
-          />
-          {errors.password && <span className="error-message">{errors.password}</span>}
-        </div>
+function AuthField({
+  id,
+  label,
+  error,
+  passwordAction = false,
+  showPassword = false,
+  onTogglePassword,
+  ...inputProps
+}) {
+  const errorId = `${id}-error`;
 
-        <div className="form-group">
-          <label>Confirme sua senha:</label>
-          <input
-            type="password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            className={`form-input ${errors.confirmPassword ? 'input-error' : ''}`}
-          />
-          {errors.confirmPassword && (
-            <span className="error-message">{errors.confirmPassword}</span>
-          )}
-        </div>
-
-        <button type="submit" className="btn-submit">
-          REGISTRAR
-        </button>
-
-      </form>
+  return (
+    <div className="auth-field-group">
+      <div className={`auth-input-field ${passwordAction ? 'has-password-action' : ''} ${error ? 'has-error' : ''}`}>
+        <input
+          id={id}
+          placeholder=" "
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : undefined}
+          {...inputProps}
+        />
+        <label htmlFor={id}>{label}</label>
+        {passwordAction && (
+          <button
+            type="button"
+            className="auth-password-toggle"
+            onClick={onTogglePassword}
+            aria-label={showPassword ? 'Ocultar senhas' : 'Mostrar senhas'}
+            title={showPassword ? 'Ocultar senhas' : 'Mostrar senhas'}
+          >
+            <UiIcon name="eye" size={19} />
+          </button>
+        )}
+      </div>
+      {error && <span id={errorId} className="auth-error-message">{error}</span>}
     </div>
   );
 }

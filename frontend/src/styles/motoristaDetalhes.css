@@ -176,6 +176,27 @@
   cursor: pointer;
 }
 
+.vales-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-adicionar-vale {
+  padding: 10px 18px;
+  color: #ffffff;
+  background: #008577;
+  border: none;
+  border-radius: 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vales-actions .btn-descontar-vale {
+  margin-top: 0;
+}
+
 .btn-descontar-vale:hover {
   background: #e6e6e6;
 }

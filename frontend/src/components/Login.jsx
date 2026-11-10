@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api/api";
 import '../styles/auth.css';
-import logo from '../assets/logo.svg';
+import ThemeControl from './ThemeControl';
+import UiIcon from './UiIcon';
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -11,6 +12,8 @@ function Login() {
   });
 
   const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const validateForm = () => {
@@ -33,8 +36,9 @@ function Login() {
     
     if (!validateForm()) return;
 
+    setIsSubmitting(true);
+
     try {
-      // ← SUBSTITUA O FETCH POR API
       const response = await api.post('/auth/login/', {
         username: formData.username,
         password: formData.password
@@ -55,6 +59,8 @@ function Login() {
       } else {
         alert('Erro ao conectar com o servidor');
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -76,44 +82,80 @@ function Login() {
 
   return (
     <div className="auth-container">
-      <div className="logo-section">
-        <div className="logo-wrapper">
-          <img src={logo} alt="Piracema Logo" className="logo-monitor" />
-        </div>
+      <div className="auth-theme-control">
+        <ThemeControl compact />
       </div>
 
-      <form onSubmit={handleSubmit} className="auth-form">
-        <div className="form-group">
-          <label>Nome/E-mail:</label>
-          <input
-            type="text"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            className={`form-input ${errors.username ? 'input-error' : ''}`}
-          />
-          {errors.username && <span className="error-message">{errors.username}</span>}
-        </div>
+      <main className="auth-shell">
+        <section className="auth-card" aria-labelledby="login-title">
+          <header className="auth-card-header">
+            <h1 id="login-title">Entre na sua conta</h1>
+          </header>
 
-        <div className="form-group">
-          <label>Senha:</label>
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            className={`form-input ${errors.password ? 'input-error' : ''}`}
-          />
-          {errors.password && <span className="error-message">{errors.password}</span>}
-        </div>
+          <form onSubmit={handleSubmit} className="auth-card-form" noValidate>
+            <div className="auth-field-group">
+              <div className={`auth-input-field ${errors.username ? 'has-error' : ''}`}>
+                <input
+                  id="login-username"
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder=" "
+                  autoComplete="username"
+                  aria-invalid={Boolean(errors.username)}
+                  aria-describedby={errors.username ? 'login-username-error' : undefined}
+                  required
+                />
+                <label htmlFor="login-username">Nome de usuário ou e-mail</label>
+              </div>
+              {errors.username && (
+                <span id="login-username-error" className="auth-error-message">{errors.username}</span>
+              )}
+            </div>
 
-        <button type="submit" className="btn-submit">ENTRAR</button>
+            <div className="auth-field-group">
+              <div className={`auth-input-field has-password-action ${errors.password ? 'has-error' : ''}`}>
+                <input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder=" "
+                  autoComplete="current-password"
+                  aria-invalid={Boolean(errors.password)}
+                  aria-describedby={errors.password ? 'login-password-error' : undefined}
+                  required
+                />
+                <label htmlFor="login-password">Senha</label>
+                <button
+                  type="button"
+                  className="auth-password-toggle"
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                  title={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  <UiIcon name="eye" size={19} />
+                </button>
+              </div>
+              {errors.password && (
+                <span id="login-password-error" className="auth-error-message">{errors.password}</span>
+              )}
+            </div>
 
-        <div className="register-link">
-          <p>NÃO POSSUI UMA CONTA?</p>
-          <Link to="/register">REGISTRE-SE</Link>
-        </div>
-      </form>
+            <div className="auth-actions">
+              <button type="submit" className="auth-submit" disabled={isSubmitting}>
+                {isSubmitting ? 'ENTRANDO…' : 'ENTRAR'}
+              </button>
+              <p>
+                Ainda não possui uma conta?
+                <Link to="/register">Criar conta</Link>
+              </p>
+            </div>
+          </form>
+        </section>
+      </main>
     </div>
   );
 }

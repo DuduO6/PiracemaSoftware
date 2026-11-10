@@ -2,12 +2,54 @@
   color-scheme: light;
   --app-background: #F8FAFC;
   --app-text: #102A38;
+  --app-surface: #FFFFFF;
+  --app-surface-elevated: #FFFFFF;
+  --app-surface-muted: #F1F5F9;
+  --app-text-secondary: #64748B;
+  --app-text-soft: #8493A5;
+  --app-border: #E2E8F0;
+  --app-border-strong: #CBD5E1;
+  --app-primary: #008577;
+  --app-primary-hover: #006B61;
+  --app-primary-soft: #E4F5F1;
+  --app-primary-contrast: #FFFFFF;
+  --app-success: #15803D;
+  --app-success-soft: #ECFDF3;
+  --app-warning: #B45309;
+  --app-warning-soft: #FFF7E8;
+  --app-danger: #DC2626;
+  --app-danger-soft: #FEF2F2;
+  --app-info: #036D82;
+  --app-info-soft: #E7F5F8;
+  --app-shadow-sm: 0 1px 2px rgba(15, 23, 42, .04);
+  --app-shadow-md: 0 12px 30px rgba(15, 23, 42, .08);
 }
 
 [data-theme="dark"] {
   color-scheme: dark;
   --app-background: #080F16;
   --app-text: #F1F5F9;
+  --app-surface: #111C26;
+  --app-surface-elevated: #172632;
+  --app-surface-muted: #0E1922;
+  --app-text-secondary: #94A3B8;
+  --app-text-soft: #708493;
+  --app-border: #263744;
+  --app-border-strong: #38505F;
+  --app-primary: #43C6B1;
+  --app-primary-hover: #65D5C2;
+  --app-primary-soft: #123A38;
+  --app-primary-contrast: #05231E;
+  --app-success: #4ADE80;
+  --app-success-soft: #123422;
+  --app-warning: #FBBF24;
+  --app-warning-soft: #382B10;
+  --app-danger: #F87171;
+  --app-danger-soft: #3C1D24;
+  --app-info: #67D0E0;
+  --app-info-soft: #12323A;
+  --app-shadow-sm: 0 1px 2px rgba(0, 0, 0, .18);
+  --app-shadow-md: 0 14px 36px rgba(0, 0, 0, .24);
 }
 
 html { background: var(--app-background); }
@@ -21,6 +63,13 @@ body {
   color: var(--app-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+#root { min-height: 100vh; }
+
+::selection {
+  color: var(--app-primary-contrast);
+  background: var(--app-primary);
 }
 
 button, input, select, textarea { font: inherit; }

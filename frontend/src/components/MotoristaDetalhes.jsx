@@ -10,6 +10,14 @@ const formatarDataBR = (dataStr) => {
   return `${dia}/${mes}/${ano}`;
 };
 
+const getLocalDateISO = () => {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = String(hoje.getMonth() + 1).padStart(2, "0");
+  const dia = String(hoje.getDate()).padStart(2, "0");
+  return `${ano}-${mes}-${dia}`;
+};
+
 function MotoristaDetalhes() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -19,6 +27,12 @@ function MotoristaDetalhes() {
   const [loading, setLoading] = useState(true);
   const [editandoVale, setEditandoVale] = useState(null);
   const [valeEditData, setValeEditData] = useState({});
+  const [showAdicionarValeModal, setShowAdicionarValeModal] = useState(false);
+  const [salvandoVale, setSalvandoVale] = useState(false);
+  const [novoValeData, setNovoValeData] = useState({
+    valor: "",
+    data: getLocalDateISO(),
+  });
   const [showDescontoValeModal, setShowDescontoValeModal] = useState(false);
   const [acertosMotorista, setAcertosMotorista] = useState([]);
   const [descontoValeData, setDescontoValeData] = useState({
@@ -126,6 +140,49 @@ function MotoristaDetalhes() {
     } catch (err) {
       console.error("Erro ao remover vale:", err);
       alert("Erro ao remover vale");
+    }
+  };
+
+  const abrirModalAdicionarVale = () => {
+    setNovoValeData({ valor: "", data: getLocalDateISO() });
+    setShowAdicionarValeModal(true);
+  };
+
+  const fecharModalAdicionarVale = () => {
+    if (salvandoVale) return;
+    setShowAdicionarValeModal(false);
+    setNovoValeData({ valor: "", data: getLocalDateISO() });
+  };
+
+  const handleAdicionarVale = async (event) => {
+    event.preventDefault();
+    const valor = Number(String(novoValeData.valor).replace(",", "."));
+    if (!valor || valor <= 0) {
+      alert("Informe um valor válido!");
+      return;
+    }
+    if (!novoValeData.data) {
+      alert("Informe a data do vale!");
+      return;
+    }
+
+    setSalvandoVale(true);
+    try {
+      await api.post("/api/vales/", {
+        motorista: Number(id),
+        valor,
+        data: novoValeData.data,
+        pago: false,
+      });
+      await carregarDados();
+      setShowAdicionarValeModal(false);
+      setNovoValeData({ valor: "", data: getLocalDateISO() });
+      alert("Vale adicionado com sucesso!");
+    } catch (err) {
+      console.error("Erro ao adicionar vale:", err);
+      alert(err.response?.data?.detail || "Erro ao adicionar vale");
+    } finally {
+      setSalvandoVale(false);
     }
   };
 
@@ -263,9 +320,14 @@ function MotoristaDetalhes() {
             <p className="total-vales total-vales-descontados">
               Já descontado: <strong>R$ {calcularTotalValesDescontados().toFixed(2)}</strong>
             </p>
-            <button className="btn-descontar-vale" onClick={abrirModalDescontoVale}>
-              DESCONTAR VALE
-            </button>
+            <div className="vales-actions">
+              <button className="btn-adicionar-vale" onClick={abrirModalAdicionarVale}>
+                ADICIONAR VALE
+              </button>
+              <button className="btn-descontar-vale" onClick={abrirModalDescontoVale}>
+                DESCONTAR VALE
+              </button>
+            </div>
           </div>
         </div>
 
@@ -447,6 +509,51 @@ function MotoristaDetalhes() {
           )}
         </div>
       </div>
+
+      {showAdicionarValeModal && (
+        <div className="modal-overlay" onClick={fecharModalAdicionarVale}>
+          <form className="modal-desconto-vale" onSubmit={handleAdicionarVale} onClick={(e) => e.stopPropagation()}>
+            <h2>Adicionar Vale</h2>
+            <p className="modal-descricao">Motorista: {motorista.nome}</p>
+
+            <div className="form-group">
+              <label htmlFor="novo-vale-valor">Valor (R$):</label>
+              <input
+                id="novo-vale-valor"
+                type="number"
+                min="0.01"
+                step="0.01"
+                inputMode="decimal"
+                value={novoValeData.valor}
+                onChange={(e) => setNovoValeData({ ...novoValeData, valor: e.target.value })}
+                placeholder="0,00"
+                autoFocus
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="novo-vale-data">Data:</label>
+              <input
+                id="novo-vale-data"
+                type="date"
+                value={novoValeData.data}
+                onChange={(e) => setNovoValeData({ ...novoValeData, data: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className="modal-buttons">
+              <button type="submit" className="btn-salvar" disabled={salvandoVale}>
+                {salvandoVale ? "SALVANDO…" : "SALVAR"}
+              </button>
+              <button type="button" className="btn-cancelar" onClick={fecharModalAdicionarVale} disabled={salvandoVale}>
+                CANCELAR
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {showDescontoValeModal && (
         <div className="modal-overlay" onClick={() => setShowDescontoValeModal(false)}>
