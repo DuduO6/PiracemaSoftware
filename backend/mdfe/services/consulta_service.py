@@ -27,16 +27,17 @@ class DocumentStatus:
 def validate_status_payload(payload):
     """Valida o retorno da SVRS, incluindo eventos retornados diretamente no envelope.
 
-    O XSD de consulta prevê eventos dentro de ``procEventoMDFe``, mas a SVRS também
-    devolve ``retEventoMDFe`` diretamente em algumas consultas. Cada evento direto é
-    validado pelo seu XSD oficial e removido somente da cópia usada para validar o
+    O XSD de consulta trata o conteúdo de ``procEventoMDFe`` como um único elemento
+    genérico, embora a resposta processada contenha ``eventoMDFe`` e ``retEventoMDFe``.
+    A SVRS também pode devolver ``retEventoMDFe`` diretamente. Cada retorno de evento
+    é validado pelo seu XSD oficial e removido somente da cópia usada para validar o
     envelope. O XML original permanece intacto para extração e auditoria.
     """
     for event in payload.xpath(".//*[local-name()='retEventoMDFe']"):
         validate_schema(event, "retEventoMDFe_v3.00.xsd")
 
     validation_copy = secure_parse(serialize(payload))
-    for event in validation_copy.xpath("./*[local-name()='retEventoMDFe']"):
+    for event in validation_copy.xpath(".//*[local-name()='retEventoMDFe']"):
         event.getparent().remove(event)
     validate_schema(validation_copy, "retConsSitMDFe_v3.00.xsd")
 
