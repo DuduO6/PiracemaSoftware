@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import logging
 from pathlib import Path
 
 from cryptography.hazmat.primitives import hashes, serialization
@@ -16,6 +17,7 @@ DS_NS = "http://www.w3.org/2000/09/xmldsig#"
 SOAP_NS = "http://www.w3.org/2003/05/soap-envelope"
 VERSION = "3.00"
 EVENT_TYPE = "110112"
+logger = logging.getLogger(__name__)
 
 
 def qname(namespace, name):
@@ -174,8 +176,11 @@ def validate_schema(element, filename):
         schema.assertValid(element)
     except (etree.XMLSchemaParseError, etree.DocumentInvalid) as exc:
         details = str(exc.error_log.last_error or exc)
+        logger.error("Falha na validação do schema MDF-e %s: %s", filename, details)
         raise MdfeError(
-            "O XML do MDF-e não atende ao schema oficial.", code="invalid_mdfe_schema", details={"schema": details}
+            f"O XML do MDF-e não atende ao schema oficial ({filename}). Detalhe: {details}",
+            code="invalid_mdfe_schema",
+            details={"schema_arquivo": filename, "schema": details},
         ) from exc
 
 

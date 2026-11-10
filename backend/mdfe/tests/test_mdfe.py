@@ -505,6 +505,30 @@ class MdfeTests(TestCase):
         self.assertNotIn("infMunDescarga", event_text)
         self.assertEqual(event.xpath("string(//*[local-name()='evEncMDFe']/*[local-name()='cMun'])"), "3106200")
 
+    def test_erro_de_schema_informa_arquivo_e_campo_invalido(self):
+        from mdfe.services.certificate_service import load_configuration_material
+
+        material = load_configuration_material(self.configuration)
+        manifest = SimpleNamespace(
+            chave=self.manifest.chave,
+            cnpj_emitente=self.manifest.cnpj_emitente,
+            protocolo_autorizacao="protocolo-invalido",
+        )
+        with self.assertRaises(MdfeError) as context:
+            build_closing_event(
+                self.configuration,
+                manifest,
+                uf="MG",
+                municipality_code="3106200",
+                closing_date=date(2026, 11, 10),
+                event_time=datetime(2026, 11, 10, 10, tzinfo=dt_timezone(timedelta(hours=-3))),
+                material=material,
+            )
+
+        self.assertEqual(context.exception.code, "invalid_mdfe_schema")
+        self.assertIn("evEncMDFe_v3.00.xsd", context.exception.message)
+        self.assertIn("nProt", context.exception.message)
+
     def test_encerramento_rejeita_campos_extraidos_do_xml(self):
         self.client.force_authenticate(self.operator)
         response = self.client.post(
