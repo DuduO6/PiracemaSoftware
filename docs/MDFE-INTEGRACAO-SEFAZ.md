@@ -118,7 +118,7 @@ O XML assinado fica cifrado com Fernet no banco. Ele contém apenas o certificad
 | `MDFE_PORTAL_CA_BUNDLE` | não | cadeia pública do sistema | CA pública/corporativa usada no domínio web do Portal |
 | `MDFE_ALLOW_INFORMATIONAL_PORTAL_XML` | não | `False` | aceita XML não verificável do Portal somente para visualização de motorista/destino |
 | `MDFE_ALLOW_UNVERIFIED_PORTAL_XML` | não | `False` | exceção diagnóstica; só funciona com `DEBUG=True` |
-| `MDFE_MUNICIPALITIES_FILE` | não | JSON do frontend | base IBGE local usada na validação |
+| `MDFE_MUNICIPALITIES_FILE` | não | `backend/mdfe/data/municipiosBrasil.json` | base IBGE local usada na validação |
 
 Nunca use `verify=False`. Quando a SVRS trocar a cadeia do servidor, atualize o bundle a partir do repositório oficial do ITI e valide fingerprint/issuer antes da implantação.
 

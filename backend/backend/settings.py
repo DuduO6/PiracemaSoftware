@@ -218,8 +218,8 @@ MDFE_ALLOW_UNVERIFIED_PORTAL_XML = DEBUG and os.getenv(
 ).lower() == "true"
 MDFE_MUNICIPALITIES_FILE = os.getenv(
     "MDFE_MUNICIPALITIES_FILE",
-    os.path.join(os.path.dirname(BASE_DIR), "frontend", "src", "data", "municipiosBrasil.json"),
-)
+    os.path.join(BASE_DIR, "mdfe", "data", "municipiosBrasil.json"),
+) or os.path.join(BASE_DIR, "mdfe", "data", "municipiosBrasil.json")
 
 # Static files
 STATIC_URL = '/static/'
