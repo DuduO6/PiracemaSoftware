@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'fretes',
     'inteligencia_logistica',
     'mdfe',
+    'idempotency-key',
 ]
 
 MIDDLEWARE = [
