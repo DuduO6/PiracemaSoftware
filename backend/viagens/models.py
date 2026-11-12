@@ -45,3 +45,52 @@ class Viagem(models.Model):
 
     def __str__(self):
         return f"{self.data} - {self.cliente} - {self.motorista.nome}"
+
+
+class ImportacaoMdfeViagem(models.Model):
+    """Rastreabilidade fiscal da origem da viagem, sem duplicar seus dados operacionais."""
+
+    viagem = models.OneToOneField(
+        Viagem,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="importacao_mdfe",
+    )
+    empresa = models.ForeignKey(
+        "inteligencia_logistica.Empresa",
+        on_delete=models.CASCADE,
+        related_name="importacoes_viagem_mdfe",
+    )
+    manifesto = models.ForeignKey(
+        "mdfe.Manifesto",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="importacoes_viagem",
+    )
+    chave_mdfe = models.CharField(max_length=44)
+    chave_cte = models.CharField(max_length=44, null=True, blank=True, default=None)
+    xml_sha256 = models.CharField(max_length=64, blank=True)
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="importacoes_viagem_mdfe",
+    )
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("empresa", "chave_mdfe"),
+                name="viagem_import_mdfe_empresa_chave_unica",
+            ),
+            models.UniqueConstraint(
+                fields=("empresa", "chave_cte"),
+                name="viagem_import_cte_empresa_chave_unica",
+            ),
+        ]
+        indexes = [models.Index(fields=("empresa", "criado_em"), name="viagem_imp_empresa_data_idx")]
+
+    def __str__(self):
+        return f"MDF-e {self.chave_mdfe}"

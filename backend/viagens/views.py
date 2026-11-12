@@ -1,7 +1,12 @@
 from rest_framework import viewsets, permissions
 from rest_framework import status
 from .models import Viagem, Motorista, Vale
-from .serializers import ViagemSerializer
+from .serializers import ImportacaoMdfeConfirmadaSerializer, ViagemSerializer
+from .services.mdfe_viagem_service import (
+    importar_viagens_confirmadas,
+    preparar_manifestos,
+)
+from .services.viagem_service import salvar_viagem_validada
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
@@ -21,6 +26,10 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.platypus import Image
 from django.contrib.staticfiles import finders
+from mdfe.models import ConfiguracaoFiscal, Manifesto
+from mdfe.permissions import MdfeOperatorPermission
+from mdfe.services.consulta_service import ConsultaMdfeService
+from mdfe.services.exceptions import MdfeError
 
 # Importar os modelos de acerto
 from acertos.models import Acerto, ItemAcerto, ValeAcerto, RegraAcerto
@@ -88,7 +97,10 @@ class ViagemViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(usuario=self.request.user)
+        salvar_viagem_validada(serializer, self.request.user)
+
+    def perform_update(self, serializer):
+        salvar_viagem_validada(serializer, self.request.user)
 
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def importar_cte(self, request):
@@ -102,6 +114,102 @@ class ViagemViewSet(viewsets.ModelViewSet):
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(dados, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="consultar-mdfe-abertos",
+        permission_classes=[MdfeOperatorPermission],
+    )
+    def consultar_mdfe_abertos(self, request):
+        try:
+            configuration = ConfiguracaoFiscal.objects.get(empresa=request.empresa_logistica)
+        except ConfiguracaoFiscal.DoesNotExist:
+            return Response(
+                {
+                    "detail": "A configuração fiscal da empresa ainda não foi cadastrada.",
+                    "code": "mdfe_not_configured",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        try:
+            audit = ConsultaMdfeService(configuration).refresh_non_closed(request.user)
+        except MdfeError as exc:
+            payload = {"detail": exc.message, "code": exc.code}
+            payload.update(exc.details)
+            return Response(payload, status=exc.status_code)
+
+        manifests = list(
+            Manifesto.objects.filter(
+                empresa=request.empresa_logistica,
+                situacao=Manifesto.Situacao.ABERTO,
+                listado_ultima_consulta=True,
+            ).order_by("-data_emissao", "-id")
+        )
+        items = preparar_manifestos(manifests, request.user, request.empresa_logistica)
+        summary = {
+            "manifestos_encontrados": len(items),
+            "disponiveis": sum(item.get("status") not in ("JA_IMPORTADO", "XML_INDISPONIVEL") for item in items),
+            "ja_cadastrados": sum(item.get("status") == "JA_IMPORTADO" for item in items),
+            "incompletos": sum(
+                item.get("status") in ("DADOS_INCOMPLETOS", "MULTIPLOS_CTE", "NECESSITA_CONFIRMACAO")
+                for item in items
+            ),
+            "xmls_indisponiveis": sum(item.get("status") == "XML_INDISPONIVEL" for item in items),
+        }
+        return Response({
+            "resumo": summary,
+            "manifestos": items,
+            "consulta": {
+                "id": audit.id,
+                "estado": audit.estado,
+                "quantidade": audit.quantidade,
+                "xml_baixados": audit.xml_baixados,
+                "xml_em_cache": audit.xml_em_cache,
+                "xml_erros": audit.xml_erros,
+                "finalizada_em": audit.finalizada_em,
+            },
+        })
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="importar-mdfe-confirmados",
+        permission_classes=[MdfeOperatorPermission],
+    )
+    def importar_mdfe_confirmados(self, request):
+        raw_records = request.data.get("registros")
+        if not isinstance(raw_records, list) or not raw_records:
+            return Response(
+                {"detail": "Selecione ao menos um MDF-e para importar.", "code": "empty_mdfe_selection"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = ImportacaoMdfeConfirmadaSerializer(data=raw_records, many=True)
+        if not serializer.is_valid():
+            return Response(
+                {
+                    "detail": "Confira os dados das viagens selecionadas.",
+                    "code": "invalid_trip_data",
+                    "erros": serializer.errors,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            trips = importar_viagens_confirmadas(
+                empresa=request.empresa_logistica,
+                usuario=request.user,
+                request=request,
+                registros=serializer.validated_data,
+            )
+        except MdfeError as exc:
+            payload = {"detail": exc.message, "code": exc.code}
+            payload.update(exc.details)
+            return Response(payload, status=exc.status_code)
+        return Response(
+            {"total_importadas": len(trips), "viagens": ViagemSerializer(trips, many=True).data},
+            status=status.HTTP_201_CREATED,
+        )
 
     @action(detail=False, methods=['post'])
     def verificar_duplicidade(self, request):

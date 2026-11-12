@@ -22,7 +22,7 @@ class MdfeEmpresaPermission(BasePermission):
 
 
 class MdfeOperatorPermission(MdfeEmpresaPermission):
-    message = "Seu perfil não permite encerrar MDF-e."
+    message = "Seu perfil permite apenas consultar os MDF-e desta empresa."
 
     def has_permission(self, request, view):
         return super().has_permission(request, view) and request.membro_empresa.papel != MembroEmpresa.Papel.LEITURA

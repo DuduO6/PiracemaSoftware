@@ -144,3 +144,28 @@ class ViagemSerializer(serializers.ModelSerializer):
         raise serializers.ValidationError(
             {"non_field_errors": ["Informe o valor por tonelada ou o valor total do frete."]}
         )
+
+
+class ImportacaoMdfeConfirmadaSerializer(serializers.Serializer):
+    mdfe_chave = serializers.RegexField(r"^\d{44}$")
+    motorista_id = serializers.IntegerField(
+        min_value=1,
+        error_messages={
+            "required": "Motorista não encontrado no cadastro. Selecione um motorista cadastrado para continuar.",
+            "null": "Motorista não encontrado no cadastro. Selecione um motorista cadastrado para continuar.",
+            "invalid": "Motorista não encontrado no cadastro. Selecione um motorista cadastrado para continuar.",
+        },
+    )
+    data = serializers.DateField()
+    origem = serializers.CharField(max_length=255, allow_blank=False, trim_whitespace=True)
+    destino = serializers.CharField(max_length=255, allow_blank=False, trim_whitespace=True)
+    cliente = serializers.CharField(max_length=255, allow_blank=False, trim_whitespace=True)
+    peso = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"))
+    valor_tonelada = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"))
+    teve_cte = serializers.BooleanField()
+    chave_cte = serializers.CharField(max_length=44, allow_blank=True, required=False, default="")
+    pago = serializers.BooleanField(default=False)
+    confirmar_divergencia_cpf = serializers.BooleanField(default=False)
+    confirmar_xml_informativo = serializers.BooleanField(default=False)
+    confirmar_possivel_duplicidade = serializers.BooleanField(default=False)
+    confirmar_diferenca_contrato = serializers.BooleanField(default=False)

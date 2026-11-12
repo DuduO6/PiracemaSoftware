@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import api from "../api/api";
 import PaginationControls from "./PaginationControls.jsx";
+import ImportarMdfeViagensModal from "./ImportarMdfeViagensModal.jsx";
 import "../styles/viagens.css";
 
 const ITENS_POR_PAGINA = 12;
@@ -124,6 +125,7 @@ const Viagens = () => {
   const [alertaDuplicidade, setAlertaDuplicidade] = useState(null);
   const [verificandoDuplicidade, setVerificandoDuplicidade] = useState(false);
   const [salvandoViagem, setSalvandoViagem] = useState(false);
+  const [showImportarMdfe, setShowImportarMdfe] = useState(false);
 
   const [showFiltro, setShowFiltro] = useState(false);
   const [filtro, setFiltro] = useState({
@@ -702,6 +704,9 @@ const Viagens = () => {
         <button className="white-btn" onClick={abrirModalNovo}>
           NOVA VIAGEM
         </button>
+        <button className="white-btn" onClick={() => setShowImportarMdfe(true)}>
+          IMPORTAR DOS MDF-e
+        </button>
         <button className="white-btn" onClick={() => setShowFiltro(true)}>
           FILTRAR
         </button>
@@ -712,6 +717,14 @@ const Viagens = () => {
           EXPORTAR PLANILHA
         </button>
       </div>
+
+      {showImportarMdfe && (
+        <ImportarMdfeViagensModal
+          motoristas={motoristas}
+          onClose={() => setShowImportarMdfe(false)}
+          onImported={(novasViagens) => setViagens((current) => [...current, ...novasViagens])}
+        />
+      )}
 
       <div className="info-viagens">
         <p className="total-text">
