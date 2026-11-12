@@ -1,4 +1,4 @@
-.mdfe-trip-overlay { z-index: 2100; padding: 20px; }
+.mdfe-trip-overlay { position: fixed; z-index: 2100; inset: 0; width: 100vw; min-height: 100dvh; padding: 20px; box-sizing: border-box; }
 .mdfe-trip-modal { width: min(1180px, 100%); max-height: 94vh; overflow: hidden; display: flex; flex-direction: column; color: #fff; background: #151515; border: 1px solid #393939; border-radius: 18px; box-shadow: 0 28px 80px rgba(0,0,0,.55); }
 .mdfe-trip-header { display: flex; justify-content: space-between; gap: 20px; padding: 20px 24px; border-bottom: 1px solid #333; }
 .mdfe-trip-header h2 { margin: 0 0 6px; font-size: 23px; }
@@ -6,6 +6,9 @@
 .mdfe-trip-header > button { width: 36px; height: 36px; flex: 0 0 auto; color: #fff; background: #2a2a2a; border: 0; border-radius: 50%; font-size: 24px; cursor: pointer; }
 .mdfe-trip-toolbar { display: flex; align-items: end; gap: 12px; padding: 14px 24px; background: #1c1c1c; border-bottom: 1px solid #333; }
 .mdfe-trip-toolbar label { display: grid; gap: 5px; min-width: 260px; color: #bbb; font-size: 12px; font-weight: 700; }
+.mdfe-trip-company { display: grid; gap: 5px; min-width: 260px; }
+.mdfe-trip-company span { color: #999; font-size: 12px; font-weight: 700; }
+.mdfe-trip-company strong { min-height: 40px; display: flex; align-items: center; padding: 0 12px; color: #fff; background: #282828; border: 1px solid #444; border-radius: 8px; }
 .mdfe-trip-toolbar select, .mdfe-trip-toolbar button, .mdfe-trip-form input, .mdfe-trip-form select { min-height: 40px; padding: 9px 11px; color: #fff; background: #282828; border: 1px solid #4a4a4a; border-radius: 8px; box-sizing: border-box; }
 .mdfe-trip-toolbar button, .mdfe-trip-footer button, .mdfe-trip-save-one { padding: 10px 16px; color: #07130a; background: #65d579; border: 0; border-radius: 8px; font-weight: 800; cursor: pointer; }
 .mdfe-trip-toolbar button:disabled, .mdfe-trip-footer button:disabled, .mdfe-trip-save-one:disabled { opacity: .48; cursor: not-allowed; }
@@ -32,11 +35,14 @@
 .mdfe-trip-fiscal, .mdfe-trip-finance, .mdfe-trip-notice { margin-bottom: 16px; padding: 15px; background: #202020; border: 1px solid #383838; border-radius: 11px; }
 .mdfe-trip-fiscal dl { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px 18px; }
 .mdfe-trip-fiscal dl div { grid-template-columns: 76px minmax(0,1fr); }
+.mdfe-trip-fiscal dl .mdfe-trip-key-line { grid-column: 1/-1; grid-template-columns: 88px minmax(0,1fr); min-width: 0; }
+.mdfe-trip-key-line dd { overflow-x: auto; overflow-wrap: normal; white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; scrollbar-width: thin; }
 .mdfe-trip-notice { color: #f0cf8c; background: rgba(179,126,25,.13); border-color: rgba(240,190,92,.25); }
 .mdfe-trip-notice p { margin: 3px 0; font-size: 12px; }
 .mdfe-trip-form { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
 .mdfe-trip-form h3, .mdfe-trip-form .wide { grid-column: 1/-1; }
 .mdfe-trip-form label { display: grid; gap: 5px; color: #bbb; font-size: 12px; font-weight: 700; }
+.mdfe-trip-form .mdfe-trip-checkbox { display: flex; align-items: center; align-self: end; min-height: 40px; flex-direction: row; }
 .mdfe-trip-form input:focus, .mdfe-trip-form select:focus { outline: none; border-color: #65d579; }
 .mdfe-trip-finance div { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid #333; font-size: 13px; }
 .mdfe-trip-finance div:last-child { border: 0; } .mdfe-trip-finance .difference strong { color: #f1b85b; }

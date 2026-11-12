@@ -3,6 +3,34 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import "../styles/novoMotorista.css";
 
+const somenteDigitosCpf = (value) => String(value || "").replace(/\D/g, "").slice(0, 11);
+
+const formatarCpf = (value) => {
+  const digits = somenteDigitosCpf(value);
+  return digits
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1-$2");
+};
+
+const cpfValido = (value) => {
+  const digits = somenteDigitosCpf(value);
+  if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return false;
+  const numbers = digits.split("").map(Number);
+  const calcularDigito = (length) => {
+    const total = numbers.slice(0, length).reduce((sum, number, index) => sum + number * (length + 1 - index), 0);
+    const remainder = total % 11;
+    return remainder < 2 ? 0 : 11 - remainder;
+  };
+  return numbers[9] === calcularDigito(9) && numbers[10] === calcularDigito(10);
+};
+
+const dataMaximaNascimento = () => {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - 18);
+  return date.toISOString().slice(0, 10);
+};
+
 function NovoMotorista() {
   const navigate = useNavigate();
 
@@ -11,6 +39,7 @@ function NovoMotorista() {
   const [dataNascimento, setDataNascimento] = useState("");
   const [vencCnh, setVencCnh] = useState("");
   const [caminhao, setCaminhao] = useState("");
+  const [cpfError, setCpfError] = useState("");
 
   const [caminhoes, setCaminhoes] = useState([]);
 
@@ -44,6 +73,11 @@ function NovoMotorista() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!cpfValido(cpf)) {
+      setCpfError("Informe um CPF válido.");
+      return;
+    }
+
     const idadeCalculada = calcularIdade(dataNascimento);
 
     if (idadeCalculada < 18) {
@@ -67,7 +101,9 @@ function NovoMotorista() {
 
     } catch (err) {
       console.error(err);
-      alert("Erro ao salvar motorista.");
+      const message = err.response?.data?.cpf?.[0] || err.response?.data?.detail || "Erro ao salvar motorista.";
+      setCpfError(err.response?.data?.cpf?.[0] || "");
+      alert(message);
     }
   };
 
@@ -91,16 +127,29 @@ function NovoMotorista() {
           type="text"
           className="input"
           value={cpf}
-          onChange={(e) => setCpf(e.target.value)}
+          onChange={(e) => {
+            setCpf(formatarCpf(e.target.value));
+            setCpfError("");
+          }}
+          onBlur={() => setCpfError(cpf && !cpfValido(cpf) ? "Informe um CPF válido." : "")}
+          inputMode="numeric"
+          autoComplete="off"
+          maxLength={14}
+          aria-invalid={Boolean(cpfError)}
+          aria-describedby="cpf-error"
           required
         />
+        {cpfError && <small id="cpf-error" className="field-error" role="alert">{cpfError}</small>}
 
+        <label>Data de nascimento</label>
         <div className="input-with-preview">
           <input
             type="date"
             className="input"
             value={dataNascimento}
             onChange={(e) => setDataNascimento(e.target.value)}
+            max={dataMaximaNascimento()}
+            autoComplete="bday"
             required
           />
           {dataNascimento && (

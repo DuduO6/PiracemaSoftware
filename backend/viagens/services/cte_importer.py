@@ -200,6 +200,7 @@ def parse_cte_xml(xml_bytes: bytes, user) -> dict:
         "data": data,
         "pago": False,
         "teve_cte": True,
+        "descontar_cte": True,
         "numero_cte": numero_cte,
         "observacoes": observacoes,
     }

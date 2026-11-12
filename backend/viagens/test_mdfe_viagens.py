@@ -51,7 +51,12 @@ def mdfe_xml(
     drivers = [("Motorista Sintético", "52998224725")] if drivers is None else drivers
     origins = [("3142809", "Monte Alegre de Minas")] if origins is None else origins
     destinations = [("3150604", "Piracema")] if destinations is None else destinations
-    contracts = [{"value": "900.00", "components": [("01", "FRETE", "900.00")]}] if contracts is None else contracts
+    contracts = [{
+        "value": "900.00",
+        "components": [("01", "FRETE", "900.00")],
+        "name": "Tomador Sintético",
+        "cpf": "39053344705",
+    }] if contracts is None else contracts
 
     origin_xml = "".join(
         f"<infMunCarrega><cMunCarrega>{code}</cMunCarrega><xMunCarrega>{name}</xMunCarrega></infMunCarrega>"
@@ -73,7 +78,12 @@ def mdfe_xml(
             f"<Comp><tpComp>{kind}</tpComp><vComp>{value}</vComp><xComp>{description}</xComp></Comp>"
             for kind, description, value in contract.get("components", [])
         )
-        payment_xml += f"<infPag><vContrato>{contract['value']}</vContrato>{components}<indPag>1</indPag></infPag>"
+        payer = ""
+        if contract.get("name"):
+            payer += f"<xNome>{contract['name']}</xNome>"
+        if contract.get("cpf"):
+            payer += f"<CPF>{contract['cpf']}</CPF>"
+        payment_xml += f"<infPag>{payer}<vContrato>{contract['value']}</vContrato>{components}<indPag>1</indPag></infPag>"
 
     mdfe_number = str(int(mdfe_key[25:34]))
     mdfe_series = str(int(mdfe_key[22:25]))
@@ -230,6 +240,8 @@ class ImportacaoViagemMdfeTests(TestCase):
         self.assertEqual(item["peso_toneladas"], "10.00")
         self.assertEqual(item["valor_contrato"], "900.00")
         self.assertEqual(item["valor_tonelada_sugerido"], "90.00")
+        self.assertEqual(item["sugestao"]["cliente"], "Tomador Sintético")
+        self.assertNotIn("39053344705", str(response.data))
         self.assertTrue(item["xml_informativo"])
         self.assertFalse(item["assinatura_validada"])
         self.assertEqual(Viagem.objects.count(), 0)
@@ -374,6 +386,37 @@ class ImportacaoViagemMdfeTests(TestCase):
         self.assertEqual(item.viagem, trip)
         self.assertEqual(settlement.valor_total_viagens, trip.valor_total)
         self.assertEqual(settlement.desconto_cte, Decimal("90.00"))
+
+    def test_viagem_com_cte_pode_participar_do_acerto_sem_desconto(self):
+        manifest = self.create_manifest()
+        response = self.import_records([
+            self.import_payload(
+                manifest,
+                descontar_cte=False,
+                confirmar_diferenca_contrato=False,
+            )
+        ])
+        self.assertEqual(response.status_code, 201, response.data)
+        trip = Viagem.objects.get()
+        self.assertTrue(trip.teve_cte)
+        self.assertFalse(trip.descontar_cte)
+        self.assertEqual(trip.calcular_desconto_cte(), Decimal("0.00"))
+        self.assertEqual(trip.valor_total, Decimal("900.00"))
+
+        settlement_response = self.client.get(
+            "/api/viagens/gerar_acerto/",
+            {
+                "motorista_id": self.driver.id,
+                "inicio": "2026-11-10",
+                "fim": "2026-11-10",
+                "salvar": "true",
+            },
+        )
+        self.assertEqual(settlement_response.status_code, 200)
+        settlement = Acerto.objects.get()
+        self.assertEqual(settlement.total_viagens_com_cte, 1)
+        self.assertEqual(settlement.desconto_cte, Decimal("0.00"))
+        self.assertEqual(ItemAcerto.objects.get().valor_desconto_cte, Decimal("0.00"))
 
     def test_nao_salva_sem_motorista_cadastrado_ou_com_motorista_alheio(self):
         manifest = self.create_manifest()

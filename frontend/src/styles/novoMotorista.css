@@ -36,6 +36,17 @@
   font-size: 18px;
 }
 
+.input[aria-invalid="true"] {
+  border: 1px solid #ff6b6b;
+}
+
+.field-error {
+  display: block;
+  margin: -12px 0 16px;
+  color: #ff9a9a;
+  font-size: 13px;
+}
+
 .white-btn {
   background: white;
   color: black;
@@ -62,7 +73,7 @@
 
 .idade-preview-inline {
   position: absolute;
-  left: 550px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 12px;

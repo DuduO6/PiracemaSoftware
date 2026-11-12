@@ -19,6 +19,7 @@ class Viagem(models.Model):
     destino = models.CharField(max_length=255)
     cliente = models.CharField(max_length=255)
     teve_cte = models.BooleanField(default=False)
+    descontar_cte = models.BooleanField(default=True)
     numero_cte = models.CharField(max_length=32, blank=True, default="")
     peso = models.DecimalField(max_digits=10, decimal_places=2)
     valor_tonelada = models.DecimalField(max_digits=10, decimal_places=2)
@@ -27,7 +28,7 @@ class Viagem(models.Model):
 
     def calcular_valor_total(self):
         valor = self.calcular_valor_bruto()
-        if self.teve_cte:
+        if self.teve_cte and self.descontar_cte:
             valor *= DESCONTO_CTE
         return valor.quantize(CASAS_DECIMAIS, rounding=ROUND_HALF_UP)
 
@@ -35,11 +36,13 @@ class Viagem(models.Model):
         return (self.peso * self.valor_tonelada).quantize(CASAS_DECIMAIS, rounding=ROUND_HALF_UP)
 
     def calcular_desconto_cte(self):
-        if not self.teve_cte:
+        if not self.teve_cte or not self.descontar_cte:
             return Decimal("0.00")
         return (self.calcular_valor_bruto() * PERCENTUAL_DESCONTO_CTE).quantize(CASAS_DECIMAIS, rounding=ROUND_HALF_UP)
 
     def save(self, *args, **kwargs):
+        if not self.teve_cte:
+            self.descontar_cte = False
         self.valor_total = self.calcular_valor_total()
         super().save(*args, **kwargs)
 

@@ -4,7 +4,7 @@
 
 Na página **Viagens**, a ação **Importar dos MDF-e** consulta os manifestos não encerrados usando o serviço `MDFeConsNaoEnc` existente. A consulta atualiza o cache normal do módulo MDF-e e prepara uma prévia a partir do XML criptografado já armazenado.
 
-A preparação não cria viagens. O usuário precisa selecionar cada MDF-e, revisar motorista, trecho, cliente, peso, valor por tonelada, CT-e e situação de pagamento e confirmar explicitamente o salvamento.
+A preparação não cria viagens. O usuário precisa selecionar cada MDF-e, revisar motorista, trecho, cliente, peso, valor por tonelada, CT-e, aplicação do desconto e situação de pagamento e confirmar explicitamente o salvamento. A empresa é obtida automaticamente do único vínculo ativo do usuário e não precisa ser selecionada no modal.
 
 XML classificado como `INFORMATIVO`, divergência de motorista, possível duplicidade histórica e diferença entre o contrato declarado e o valor líquido exigem confirmações específicas.
 
@@ -35,7 +35,9 @@ Se a viagem for excluída pelo fluxo atual, a rastreabilidade fiscal permanece c
 
 ## Regras financeiras e acertos
 
-O backend continua calculando peso × valor por tonelada pelo modelo `Viagem`. Quando existe CT-e, aplica os mesmos 10% atuais. `vContrato` serve somente para sugerir o valor por tonelada e comparar o contrato com o valor líquido; `vCarga` não é usado como frete.
+O backend continua calculando peso × valor por tonelada pelo modelo `Viagem`. Quando existe CT-e, a checkbox `descontar_cte` define se os 10% serão aplicados. Viagens existentes com CT-e preservam o desconto habilitado; viagens sem CT-e ficam com a opção desabilitada. `vContrato` serve somente para sugerir o valor por tonelada e comparar o contrato com o valor líquido; `vCarga` não é usado como frete.
+
+O nome em `infPag/xNome` é usado como sugestão de cliente/tomador. CPF ou CNPJ do grupo de pagamento não é enviado integralmente ao frontend.
 
 Nenhuma alteração foi feita nos modelos, filtros ou na geração de acertos. Uma viagem importada participa do acerto pelo mesmo queryset e é copiada para `ItemAcerto` da mesma forma que qualquer viagem manual.
 
@@ -55,7 +57,7 @@ Os testes usam XMLs sintéticos e mocks para as integrações externas.
 
 1. Fazer backup e validar a migration em homologação.
 2. Configurar a mesma `MDFE_ENCRYPTION_KEY` usada para os XMLs armazenados.
-3. Executar a migration `viagens.0003_importacaomdfeviagem` na janela aprovada.
+3. Executar as migrations `viagens.0003_importacaomdfeviagem` e `viagens.0004_viagem_descontar_cte` na janela aprovada.
 4. Publicar backend e frontend da mesma versão.
 5. Testar inicialmente com uma empresa de homologação e um MDF-e sintético/controlado.
 6. Verificar permissões `ADMIN`/`OPERADOR`, importação, listagem da viagem e geração de acerto.

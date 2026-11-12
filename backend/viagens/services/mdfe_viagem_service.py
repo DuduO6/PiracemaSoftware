@@ -112,11 +112,14 @@ def _contratos(info):
                 "valor": f"{amount:.2f}" if amount is not None else "",
             })
         contract = _decimal(_text(payment, "vContrato"))
+        document = _digits(_text(payment, "CPF") or _text(payment, "CNPJ"))
         result.append({
             "valor": f"{contract:.2f}" if contract is not None else "",
             "indicador_pagamento": _text(payment, "indPag"),
             "componentes": components,
             "parcelas": len(payment.xpath("./*[local-name()='infPrazo']")),
+            "tomador_nome": _text(payment, "xNome"),
+            "tomador_documento_mascarado": f"***{document[-2:]}" if document else "",
         })
     return result
 
@@ -187,6 +190,12 @@ def extrair_dados_viagem_mdfe(manifesto, usuario):
 
     weight_ton, weight_unit, weight_warning = _peso(info)
     contracts = _contratos(info)
+    payer_names = {
+        contract["tomador_nome"].strip()
+        for contract in contracts
+        if contract["tomador_nome"].strip()
+    }
+    suggested_customer = next(iter(payer_names)) if len(payer_names) == 1 else ""
     contract_value = None
     if len(contracts) == 1:
         parsed_contract = _decimal(contracts[0]["valor"])
@@ -252,6 +261,7 @@ def extrair_dados_viagem_mdfe(manifesto, usuario):
         "contratos": contracts,
         "valor_contrato": contract_value,
         "valor_tonelada_sugerido": suggested_rate,
+        "cliente_sugerido": suggested_customer,
         "produto": product,
         "placa": vehicle_plate,
         "motorista_sugerido_id": selected_driver,
@@ -291,9 +301,8 @@ def _publicar_preview(extracted, usuario, empresa):
         pending.append(extracted["aviso_peso"] or "Informe o peso em toneladas.")
     if not extracted["motorista_sugerido_id"]:
         pending.append(MOTORISTA_NAO_ENCONTRADO)
-    pending.append("Informe o cliente/tomador antes de salvar.")
-    if extracted["xml_informativo"]:
-        pending.append("XML informativo: a assinatura do conteúdo não foi validada.")
+    if not extracted["cliente_sugerido"]:
+        pending.append("Informe o cliente/tomador antes de salvar.")
     if historical:
         pending.append("Há viagem histórica com o mesmo número de CT-e; confirme após revisar.")
 
@@ -304,7 +313,7 @@ def _publicar_preview(extracted, usuario, empresa):
     elif len(extracted["ctes"]) > 1:
         status_code = "MULTIPLOS_CTE"
         status_label = "Múltiplos CT-e"
-    elif pending:
+    elif pending or extracted["xml_informativo"]:
         status_code = "NECESSITA_CONFIRMACAO" if extracted["xml_informativo"] else "DADOS_INCOMPLETOS"
         status_label = "Necessita confirmação" if extracted["xml_informativo"] else "Dados incompletos"
     else:
@@ -346,6 +355,7 @@ def _publicar_preview(extracted, usuario, empresa):
         "contratos": extracted["contratos"],
         "valor_contrato": f"{contract:.2f}" if contract else "",
         "valor_tonelada_sugerido": f"{suggested:.2f}" if suggested else "",
+        "cliente_sugerido": extracted["cliente_sugerido"],
         "produto": extracted["produto"],
         "placa": extracted["placa"],
         "motorista_sugerido_id": extracted["motorista_sugerido_id"],
@@ -362,10 +372,11 @@ def _publicar_preview(extracted, usuario, empresa):
             "data": extracted["data_emissao"].date().isoformat(),
             "origem": extracted["origens"][0]["municipio"] if len(extracted["origens"]) == 1 else "",
             "destino": extracted["destinos"][0]["municipio"] if len(extracted["destinos"]) == 1 else "",
-            "cliente": "",
+            "cliente": extracted["cliente_sugerido"],
             "peso": f"{weight:.2f}" if weight else "",
             "valor_tonelada": f"{suggested:.2f}" if suggested else "",
             "teve_cte": bool(extracted["ctes"]),
+            "descontar_cte": bool(extracted["ctes"]),
             "chave_cte": extracted["ctes"][0]["chave"] if len(extracted["ctes"]) == 1 else "",
             "pago": False,
         },
@@ -458,7 +469,7 @@ def importar_viagens_confirmadas(*, empresa, usuario, request, registros):
                     )
                 if extracted["xml_informativo"] and not item["confirmar_xml_informativo"]:
                     raise MdfeError(
-                        "Confirme o uso operacional do XML informativo antes de salvar.",
+                        "Revise e confirme os dados extraídos antes de salvar.",
                         code="informational_xml_confirmation_required",
                         status_code=409,
                         details={"indice": index},
@@ -509,7 +520,8 @@ def importar_viagens_confirmadas(*, empresa, usuario, request, registros):
 
                 if extracted["valor_contrato"] and item["teve_cte"]:
                     gross = _money(item["peso"] * item["valor_tonelada"])
-                    net = _money(gross - _money(gross * DESCONTO_CTE))
+                    discount = _money(gross * DESCONTO_CTE) if item["descontar_cte"] else Decimal("0.00")
+                    net = _money(gross - discount)
                     if net != _money(extracted["valor_contrato"]) and not item["confirmar_diferenca_contrato"]:
                         raise MdfeError(
                             "O valor líquido calculado difere do contrato do MDF-e. Confirme a diferença para continuar.",
@@ -527,6 +539,7 @@ def importar_viagens_confirmadas(*, empresa, usuario, request, registros):
                     "peso": item["peso"],
                     "valor_tonelada": item["valor_tonelada"],
                     "teve_cte": bool(cte),
+                    "descontar_cte": bool(cte) and item["descontar_cte"],
                     "numero_cte": cte["numero"] if cte else "",
                     "pago": item["pago"],
                 }

@@ -36,10 +36,11 @@ class ViagemSerializer(serializers.ModelSerializer):
         peso = attrs.get("peso", getattr(self.instance, "peso", None))
         valor_tonelada = attrs.get("valor_tonelada", getattr(self.instance, "valor_tonelada", None))
         teve_cte = attrs.get("teve_cte", getattr(self.instance, "teve_cte", False))
+        descontar_cte = attrs.get("descontar_cte", getattr(self.instance, "descontar_cte", True))
         if peso is None or valor_tonelada is None:
             return None
         valor_total = peso * valor_tonelada
-        if teve_cte:
+        if teve_cte and descontar_cte:
             valor_total *= Decimal("0.90")
         return valor_total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
@@ -75,6 +76,7 @@ class ViagemSerializer(serializers.ModelSerializer):
         destino = self._normalize_text(attrs.get("destino", getattr(self.instance, "destino", "")))
         cliente = self._normalize_text(attrs.get("cliente", getattr(self.instance, "cliente", "")))
         teve_cte = attrs.get("teve_cte", getattr(self.instance, "teve_cte", False))
+        descontar_cte = attrs.get("descontar_cte", getattr(self.instance, "descontar_cte", True))
         numero_cte = self._normalize_text(attrs.get("numero_cte", getattr(self.instance, "numero_cte", "")))
         valor_total = self._get_valor_total(attrs)
 
@@ -84,6 +86,7 @@ class ViagemSerializer(serializers.ModelSerializer):
                 and self._normalize_text(viagem.destino) == destino
                 and self._normalize_text(viagem.cliente) == cliente
                 and viagem.teve_cte == teve_cte
+                and viagem.descontar_cte == descontar_cte
                 and self._normalize_text(viagem.numero_cte) == numero_cte
                 and (valor_total is None or viagem.valor_total == valor_total)
             ):
@@ -125,6 +128,7 @@ class ViagemSerializer(serializers.ModelSerializer):
 
         if not teve_cte:
             attrs["numero_cte"] = ""
+            attrs["descontar_cte"] = False
 
         if valor_tonelada and valor_total_informado:
             raise serializers.ValidationError(
@@ -163,6 +167,7 @@ class ImportacaoMdfeConfirmadaSerializer(serializers.Serializer):
     peso = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"))
     valor_tonelada = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"))
     teve_cte = serializers.BooleanField()
+    descontar_cte = serializers.BooleanField(default=True)
     chave_cte = serializers.CharField(max_length=44, allow_blank=True, required=False, default="")
     pago = serializers.BooleanField(default=False)
     confirmar_divergencia_cpf = serializers.BooleanField(default=False)

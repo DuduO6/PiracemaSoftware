@@ -38,7 +38,6 @@ from .services.cte_importer import parse_cte_xml
 
 CASAS_DECIMAIS = Decimal("0.01")
 PERCENTUAL_DESCONTO_CTE = Decimal("10")
-FATOR_DESCONTO_CTE = PERCENTUAL_DESCONTO_CTE / Decimal("100")
 
 
 def arredondar_moeda(valor):
@@ -267,7 +266,7 @@ class ViagemViewSet(viewsets.ModelViewSet):
                 f"{viagem.peso:.2f}",
                 f"{viagem.valor_tonelada:.2f}",
                 f"{viagem.calcular_valor_bruto():.2f}",
-                f"{arredondar_moeda(viagem.peso * viagem.valor_tonelada * FATOR_DESCONTO_CTE) if viagem.teve_cte else Decimal('0.00'):.2f}",
+                f"{viagem.calcular_desconto_cte():.2f}",
                 f"{viagem.valor_total:.2f}",
                 "Sim" if viagem.teve_cte else "Nao",
                 viagem.numero_cte or "",
@@ -455,7 +454,7 @@ class ViagemViewSet(viewsets.ModelViewSet):
         total_viagens_sem_cte = len(viagens_sem_cte)
         valor_total_viagens_sem_cte = arredondar_moeda(sum((v.valor_total for v in viagens_sem_cte), Decimal("0.00")))
         desconto_cte_por_viagem = {
-            v.id: arredondar_moeda((v.peso * v.valor_tonelada) * FATOR_DESCONTO_CTE) if v.teve_cte else Decimal("0.00")
+            v.id: v.calcular_desconto_cte()
             for v in viagens
         }
         desconto_cte = arredondar_moeda(sum(desconto_cte_por_viagem.values(), Decimal("0.00")))

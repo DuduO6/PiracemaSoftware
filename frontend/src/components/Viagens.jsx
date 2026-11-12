@@ -49,6 +49,7 @@ const ROTULOS_CAMPOS_VIAGEM = {
   destino: "Destino",
   cliente: "Cliente",
   numero_cte: "Número do CT-e",
+  descontar_cte: "Aplicar desconto do CT-e",
   peso: "Peso",
   valor_tonelada: "Valor por tonelada",
   valor_total_informado: "Valor total do frete",
@@ -82,7 +83,7 @@ const sanitizarNomeArquivo = (valor) => {
 };
 
 const calcularDescontoCte = (viagem) => {
-  if (!viagem?.teve_cte) return 0;
+  if (!viagem?.teve_cte || viagem?.descontar_cte === false) return 0;
   return Number(viagem.valor_desconto_cte ?? (Number(viagem.peso || 0) * Number(viagem.valor_tonelada || 0) * 0.1));
 };
 
@@ -97,6 +98,7 @@ const getInitialViagemData = () => ({
   destino: "",
   cliente: "",
   teve_cte: false,
+  descontar_cte: false,
   numero_cte: "",
   peso: "",
   valor_tonelada: "",
@@ -340,11 +342,12 @@ const Viagens = () => {
     const { name, value, type, checked } = e.target;
     setViagemData((prev) => {
       if (type === "checkbox") {
-        if (name === "teve_cte" && !checked) {
+        if (name === "teve_cte") {
           return {
             ...prev,
-            teve_cte: false,
-            numero_cte: "",
+            teve_cte: checked,
+            descontar_cte: checked,
+            numero_cte: checked ? prev.numero_cte : "",
           };
         }
         return {
@@ -400,6 +403,7 @@ const Viagens = () => {
         destino: dados.destino || "",
         cliente: dados.cliente || "",
         teve_cte: Boolean(dados.teve_cte),
+        descontar_cte: Boolean(dados.teve_cte),
         numero_cte: dados.numero_cte || "",
         peso: dados.peso || "",
         valor_tonelada: "",
@@ -466,7 +470,7 @@ const Viagens = () => {
     : viagemData.valor_total_informado;
 
   const previewValorBruto = parseDecimalInput(valorTotalExibido);
-  const previewDescontoCte = viagemData.teve_cte && Number.isFinite(previewValorBruto)
+  const previewDescontoCte = viagemData.teve_cte && viagemData.descontar_cte && Number.isFinite(previewValorBruto)
     ? previewValorBruto * 0.1
     : 0;
   const previewValorLiquido = Number.isFinite(previewValorBruto)
@@ -581,6 +585,7 @@ const Viagens = () => {
       destino: viagem.destino,
       cliente: viagem.cliente,
       teve_cte: Boolean(viagem.teve_cte),
+      descontar_cte: Boolean(viagem.teve_cte && viagem.descontar_cte !== false),
       numero_cte: viagem.numero_cte || "",
       peso: viagem.peso,
       valor_tonelada: viagem.valor_tonelada,
@@ -797,8 +802,8 @@ const Viagens = () => {
                   <td className="numeric-cell">{v.peso}</td>
                   <td className="numeric-cell">R$ {Number(v.valor_tonelada).toFixed(2)}</td>
                   <td className="numeric-cell">R$ {calcularValorBruto(v).toFixed(2)}</td>
-                  <td className={`numeric-cell ${v.teve_cte ? "valor-desconto-cte" : ""}`}>
-                    {v.teve_cte ? `- R$ ${calcularDescontoCte(v).toFixed(2)}` : "R$ 0.00"}
+                  <td className={`numeric-cell ${calcularDescontoCte(v) > 0 ? "valor-desconto-cte" : ""}`}>
+                    {calcularDescontoCte(v) > 0 ? `- R$ ${calcularDescontoCte(v).toFixed(2)}` : "R$ 0.00"}
                   </td>
                   <td className="numeric-cell">R$ {Number(v.valor_total).toFixed(2)}</td>
                   <td className="nowrap-cell">{v.teve_cte ? `Sim${v.numero_cte ? ` - ${v.numero_cte}` : ""}` : "Não"}</td>
@@ -1019,6 +1024,18 @@ const Viagens = () => {
               <label htmlFor="teve_cte">Viagem com CT-e</label>
             </div>
 
+            <div className="form-group-checkbox">
+              <input
+                type="checkbox"
+                name="descontar_cte"
+                id="descontar_cte"
+                checked={viagemData.descontar_cte}
+                disabled={!viagemData.teve_cte}
+                onChange={handleViagemInputChange}
+              />
+              <label htmlFor="descontar_cte">Aplicar desconto de 10% do CT-e</label>
+            </div>
+
             <div className="form-group">
               <label>Número do CT-e:</label>
               <input
@@ -1090,9 +1107,9 @@ const Viagens = () => {
                   <span>Valor bruto da viagem</span>
                   <strong>{formatarMoeda(previewValorBruto)}</strong>
                 </div>
-                <div className={viagemData.teve_cte ? "cte-preview-desconto" : ""}>
+                <div className={viagemData.teve_cte && viagemData.descontar_cte ? "cte-preview-desconto" : ""}>
                   <span>Desconto CT-e (10%)</span>
-                  <strong>{viagemData.teve_cte ? `- ${formatarMoeda(previewDescontoCte)}` : formatarMoeda(0)}</strong>
+                  <strong>{previewDescontoCte > 0 ? `- ${formatarMoeda(previewDescontoCte)}` : formatarMoeda(0)}</strong>
                 </div>
                 <div className="cte-preview-liquido">
                   <span>Valor líquido lançado</span>
@@ -1205,7 +1222,7 @@ const Viagens = () => {
               <div><strong>Peso:</strong> {Number(payloadPendente.peso).toFixed(2)} TN</div>
               <div><strong>Valor / TN:</strong> {formatarMoeda(modoValorAtual === VALOR_TOTAL_FRETE ? valorToneladaCalculado : payloadPendente.valor_tonelada)}</div>
               <div><strong>Valor bruto:</strong> {formatarMoeda(modoValorAtual === VALOR_POR_TONELADA ? valorTotalCalculado : payloadPendente.valor_total_informado)}</div>
-              <div><strong>Desconto CT-e:</strong> {payloadPendente.teve_cte ? `- ${formatarMoeda(previewDescontoCte)}` : formatarMoeda(0)}</div>
+              <div><strong>Desconto CT-e:</strong> {payloadPendente.teve_cte && payloadPendente.descontar_cte ? `- ${formatarMoeda(previewDescontoCte)}` : formatarMoeda(0)}</div>
               <div><strong>Valor líquido:</strong> {formatarMoeda(previewValorLiquido)}</div>
               <div><strong>CT-e:</strong> {payloadPendente.teve_cte ? `Sim - ${payloadPendente.numero_cte}` : "Não"}</div>
               <div><strong>Pago:</strong> {payloadPendente.pago ? "Sim" : "Não"}</div>

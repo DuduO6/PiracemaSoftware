@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import api from "../api/api";
 import "../styles/importarMdfeViagens.css";
 
@@ -27,6 +28,7 @@ const formularioInicial = (manifest) => ({
   peso: manifest.sugestao?.peso || "",
   valor_tonelada: manifest.sugestao?.valor_tonelada || "",
   teve_cte: Boolean(manifest.sugestao?.teve_cte),
+  descontar_cte: Boolean(manifest.sugestao?.descontar_cte),
   chave_cte: manifest.sugestao?.chave_cte || "",
   pago: Boolean(manifest.sugestao?.pago),
   confirmar_divergencia_cpf: false,
@@ -112,7 +114,7 @@ export default function ImportarMdfeViagensModal({ motoristas, onClose, onImport
     const rate = Number(numero(activeForm.valor_tonelada));
     if (!Number.isFinite(weight) || !Number.isFinite(rate) || weight <= 0 || rate <= 0) return null;
     const gross = weight * rate;
-    const discount = activeForm.teve_cte ? gross * 0.1 : 0;
+    const discount = activeForm.teve_cte && activeForm.descontar_cte ? gross * 0.1 : 0;
     const net = gross - discount;
     const contract = Number(activeManifest?.valor_contrato || 0);
     return { gross, discount, net, contract, difference: contract ? net - contract : 0 };
@@ -168,31 +170,21 @@ export default function ImportarMdfeViagensModal({ motoristas, onClose, onImport
     }
   };
 
-  return (
+  return createPortal((
     <div className="modal-overlay mdfe-trip-overlay" role="presentation">
       <section className="mdfe-trip-modal" role="dialog" aria-modal="true" aria-labelledby="mdfe-trip-title">
         <header className="mdfe-trip-header">
           <div>
             <h2 id="mdfe-trip-title">Importar viagens dos MDF-e em aberto</h2>
-            <p>Selecione os manifestos, confira os dados extraídos e confirme as viagens que deseja cadastrar.</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar">×</button>
         </header>
 
         <div className="mdfe-trip-toolbar">
-          <label>Empresa
-            <select
-              value={companyId}
-              onChange={(event) => {
-                const value = event.target.value;
-                setCompanyId(value);
-                consult(value);
-              }}
-              disabled={loading || saving}
-            >
-              {companies.map((company) => <option key={company.id} value={company.id}>{company.nome}</option>)}
-            </select>
-          </label>
+          <div className="mdfe-trip-company">
+            <span>Transportadora do manifesto</span>
+            <strong>{selectedCompany?.nome || "Identificando…"}</strong>
+          </div>
           <button type="button" onClick={() => consult(companyId)} disabled={!companyId || loading || saving}>
             {loading ? "Consultando…" : "Consultar novamente"}
           </button>
@@ -267,11 +259,12 @@ export default function ImportarMdfeViagensModal({ motoristas, onClose, onImport
                     <h3>Dados fiscais</h3>
                     <dl>
                       <div><dt>MDF-e</dt><dd>{activeManifest.numero_mdfe} · série {activeManifest.serie_mdfe}</dd></div>
-                      <div><dt>Chave</dt><dd title={activeManifest.chave_mdfe}>{activeManifest.chave_mdfe}</dd></div>
                       <div><dt>Emissão</dt><dd>{new Date(activeManifest.data_emissao).toLocaleString("pt-BR")}</dd></div>
                       <div><dt>Contrato</dt><dd>{activeManifest.valor_contrato ? dinheiro(activeManifest.valor_contrato) : "Não informado"}</dd></div>
+                      <div><dt>Tomador</dt><dd>{activeManifest.cliente_sugerido || "Não informado"}</dd></div>
                       <div><dt>Produto</dt><dd>{activeManifest.produto?.nome || "Não informado"}</dd></div>
-                      <div><dt>Assinatura</dt><dd>{activeManifest.assinatura_validada ? "Conteúdo validado" : "Não validada — XML informativo"}</dd></div>
+                      <div className="mdfe-trip-key-line"><dt>Chave MDF-e</dt><dd title={activeManifest.chave_mdfe}>{activeManifest.chave_mdfe}</dd></div>
+                      <div className="mdfe-trip-key-line"><dt>Chave CT-e</dt><dd title={activeForm.chave_cte}>{activeForm.chave_cte || "Não informada"}</dd></div>
                     </dl>
                   </div>
 
@@ -308,6 +301,15 @@ export default function ImportarMdfeViagensModal({ motoristas, onClose, onImport
                         ))}
                       </select>
                     </label>
+                    <label className="mdfe-trip-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={activeForm.descontar_cte}
+                        disabled={!activeForm.teve_cte}
+                        onChange={(event) => updateForm("descontar_cte", event.target.checked)}
+                      />
+                      Aplicar desconto de 10% do CT-e
+                    </label>
                     <label>Situação de pagamento
                       <select value={activeForm.pago ? "pago" : "pendente"} onChange={(event) => updateForm("pago", event.target.value === "pago")}>
                         <option value="pendente">Pendente</option>
@@ -334,7 +336,7 @@ export default function ImportarMdfeViagensModal({ motoristas, onClose, onImport
                       <label><input type="checkbox" checked={activeForm.confirmar_divergencia_cpf} onChange={(event) => updateForm("confirmar_divergencia_cpf", event.target.checked)} /> Confirmo o motorista responsável e eventual divergência de CPF.</label>
                     )}
                     {activeManifest.xml_informativo && (
-                      <label><input type="checkbox" checked={activeForm.confirmar_xml_informativo} onChange={(event) => updateForm("confirmar_xml_informativo", event.target.checked)} /> Revisei e confirmo o uso operacional deste XML informativo.</label>
+                      <label><input type="checkbox" checked={activeForm.confirmar_xml_informativo} onChange={(event) => updateForm("confirmar_xml_informativo", event.target.checked)} /> Confirmo que revisei os dados extraídos.</label>
                     )}
                     {activeManifest.possiveis_duplicidades?.length > 0 && (
                       <label><input type="checkbox" checked={activeForm.confirmar_possivel_duplicidade} onChange={(event) => updateForm("confirmar_possivel_duplicidade", event.target.checked)} /> Revisei a possível duplicidade histórica do CT-e.</label>
@@ -364,5 +366,5 @@ export default function ImportarMdfeViagensModal({ motoristas, onClose, onImport
         </footer>
       </section>
     </div>
-  );
+  ), document.body);
 }

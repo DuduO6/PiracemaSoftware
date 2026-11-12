@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import ThemeControl from "../components/ThemeControl";
 import UiIcon from "../components/UiIcon";
@@ -92,7 +93,7 @@ function Modal({ title, children, onClose, wide = false }) {
     };
   }, []);
 
-  return (
+  return createPortal((
     <div className="mdfe-modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section
         ref={modalRef}
@@ -111,7 +112,7 @@ function Modal({ title, children, onClose, wide = false }) {
         {children}
       </section>
     </div>
-  );
+  ), document.body);
 }
 
 function MunicipalityField({ uf, value, onSelect }) {
@@ -200,7 +201,6 @@ function DestinationList({ manifest }) {
           <small>{destination.uf || "—"} · {destination.codigo}</small>
         </span>
       ))}
-      {manifest.xml_somente_informativo && <small className="mdfe-informational">Não será usado no encerramento</small>}
     </div>
   );
 }
@@ -404,9 +404,24 @@ export default function ManifestosMdfe() {
   }, [companyId, filter, history, load, page, search]);
 
   const openClosing = (manifest) => {
+    const xmlDestination = manifest.destinos?.[0];
+    const knownMunicipality = xmlDestination
+      ? municipiosBrasil.find((item) => String(item.id) === String(xmlDestination.codigo))
+      : null;
+    const municipality = knownMunicipality || (xmlDestination?.codigo ? {
+      id: xmlDestination.codigo,
+      cidade: xmlDestination.municipio,
+      estado: xmlDestination.uf,
+      label: `${xmlDestination.municipio} - ${xmlDestination.uf}`,
+    } : null);
     setSelected(manifest);
     setOperation(null);
-    setClosing({ uf: configuration?.uf || "", municipality: null, date: "", confirmation: false });
+    setClosing({
+      uf: municipality?.estado || xmlDestination?.uf || configuration?.uf || "",
+      municipality,
+      date: "",
+      confirmation: false,
+    });
   };
 
   const submitClosing = async (event) => {
@@ -659,7 +674,6 @@ export default function ManifestosMdfe() {
           ) : (
             <form onSubmit={submitClosing} className="mdfe-form">
               <div className="mdfe-document"><span>MDF-e {selected.numero ? Number(selected.numero) : "sem número disponível"}</span><code>{selected.chave}</code><small>Protocolo de autorização: {selected.protocolo_autorizacao}</small></div>
-              {selected.xml_somente_informativo && <p className="mdfe-informational-note"><UiIcon name="warning" size={18} /><span><strong>Atenção:</strong> motorista e destino vieram de um XML informativo. O sistema não usa esses dados neste encerramento; confirme manualmente o município abaixo.</span></p>}
               <div className="mdfe-form-grid"><label>UF do encerramento<select required value={closing.uf} onChange={(event) => setClosing((value) => ({ ...value, uf: event.target.value, municipality: null }))}><option value="">Selecione</option>{UF.map((value) => <option key={value}>{value}</option>)}</select></label><MunicipalityField uf={closing.uf} value={closing.municipality} onSelect={(municipality) => setClosing((value) => ({ ...value, municipality }))} /><label>Data efetiva do encerramento<input type="date" required value={closing.date} onChange={(event) => setClosing((value) => ({ ...value, date: event.target.value }))} /></label></div>
               <label className="mdfe-confirm"><input type="checkbox" checked={closing.confirmation} onChange={(event) => setClosing((value) => ({ ...value, confirmation: event.target.checked }))} />Confirmo que a viagem foi concluída no local e na data informados.</label>
               <div className="mdfe-modal-actions"><button type="button" className="mdfe-btn secondary" disabled={processing} onClick={() => setSelected(null)}>Cancelar</button><button className="mdfe-btn danger" disabled={processing}>{processing ? "Transmitindo à SEFAZ…" : "Confirmar encerramento"}</button></div>
@@ -671,7 +685,7 @@ export default function ManifestosMdfe() {
       {configurationOpen && (
         <Modal title="Configuração fiscal da transportadora" onClose={() => !processing && setConfigurationOpen(false)} wide>
           <form className="mdfe-form" onSubmit={saveConfiguration}>
-            <p className="mdfe-security-note"><UiIcon name="shield" size={19} /><span>O certificado e a senha são criptografados no backend e nunca retornam para esta tela. Deixe o arquivo em branco para manter o certificado atual.</span></p>
+            <p className="mdfe-security-note"><UiIcon name="shield" size={19} /><span>O certificado e a senha permanecem criptografados.</span></p>
             <div className="mdfe-form-grid"><label>Razão social<input name="razao_social" required defaultValue={configuration?.razao_social || activeCompany?.nome || ""} /></label><label>CNPJ<input name="cnpj" required maxLength="18" defaultValue={configuration?.cnpj || ""} /></label><label>UF do estabelecimento<select name="uf" required defaultValue={configuration?.uf || ""}><option value="">Selecione</option>{UF.filter((value) => value !== "EX").map((value) => <option key={value}>{value}</option>)}</select></label><label>Ambiente fiscal<select name="ambiente" defaultValue={configuration?.ambiente || "HOMOLOGACAO"}><option value="HOMOLOGACAO">Homologação</option><option value="PRODUCAO">Produção</option></select></label><label>Certificado A1 (.pfx ou .p12)<input name="certificado" type="file" accept=".pfx,.p12" /></label><label>Senha do novo certificado<input name="senha_certificado" type="password" autoComplete="new-password" /></label></div>
             {configuration?.certificado_configurado && <div className="mdfe-certificate"><strong><UiIcon name="check" size={17} /> Certificado configurado</strong><span>Válido até {formatDateTime(configuration.certificado_valido_ate)}</span><span>Fingerprint SHA-256: {configuration.certificado_fingerprint}</span></div>}
             <label className="mdfe-confirm production"><input name="confirmar_producao" value="true" type="checkbox" />Confirmo a liberação administrativa para produção. Esta opção só funciona quando o servidor também estiver explicitamente habilitado.</label>
