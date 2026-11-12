@@ -23,9 +23,14 @@ api.interceptors.request.use(config => {
   }
 
   const empresaId = localStorage.getItem("empresa_logistica_id");
+  const requerEmpresaMdfe = (
+    config.url.includes("/api/mdfe/")
+    || config.url.includes("/api/viagens/consultar-mdfe-abertos/")
+    || config.url.includes("/api/viagens/importar-mdfe-confirmados/")
+  );
   if (
     empresaId &&
-    config.url.includes("/api/mdfe/")
+    requerEmpresaMdfe
   ) {
     config.headers["X-Empresa-ID"] = empresaId;
   }

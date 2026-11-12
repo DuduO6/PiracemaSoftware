@@ -12,7 +12,7 @@ XML classificado como `INFORMATIVO`, divergência de motorista, possível duplic
 
 ### `POST /api/viagens/consultar-mdfe-abertos/`
 
-Requer autenticação, cabeçalho `X-Empresa-ID` e perfil `ADMIN` ou `OPERADOR`. Reutiliza a consulta de MDF-e não encerrados e o download/cache já implementado. Retorna somente os campos necessários à revisão; não retorna XML, CPF completo, certificado ou conteúdo criptografado.
+Requer autenticação, cabeçalho `X-Empresa-ID` e vínculo ativo com a empresa. Perfis `LEITURA` podem consultar, mas não confirmar a importação. Reutiliza a consulta de MDF-e não encerrados e o download/cache já implementado. Retorna somente os campos necessários à revisão; não retorna XML, CPF completo, certificado ou conteúdo criptografado.
 
 ### `POST /api/viagens/importar-mdfe-confirmados/`
 

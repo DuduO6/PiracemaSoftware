@@ -10,6 +10,7 @@
 .mdfe-trip-toolbar button, .mdfe-trip-footer button, .mdfe-trip-save-one { padding: 10px 16px; color: #07130a; background: #65d579; border: 0; border-radius: 8px; font-weight: 800; cursor: pointer; }
 .mdfe-trip-toolbar button:disabled, .mdfe-trip-footer button:disabled, .mdfe-trip-save-one:disabled { opacity: .48; cursor: not-allowed; }
 .mdfe-trip-error { margin: 14px 24px 0; padding: 11px 14px; color: #ffb8b8; background: rgba(255,80,80,.12); border-left: 4px solid #ff6868; border-radius: 8px; }
+.mdfe-trip-readonly { margin: 14px 24px 0; padding: 11px 14px; color: #f5d18a; background: rgba(219,161,45,.12); border-left: 4px solid #dba12d; border-radius: 8px; }
 .mdfe-trip-summary { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 9px; padding: 14px 24px; border-bottom: 1px solid #333; }
 .mdfe-trip-summary span { padding: 10px; text-align: center; color: #bbb; background: #222; border-radius: 9px; font-size: 12px; }
 .mdfe-trip-summary strong { display: block; color: #fff; font-size: 19px; }

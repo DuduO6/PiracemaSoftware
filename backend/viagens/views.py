@@ -27,7 +27,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import Image
 from django.contrib.staticfiles import finders
 from mdfe.models import ConfiguracaoFiscal, Manifesto
-from mdfe.permissions import MdfeOperatorPermission
+from mdfe.permissions import MdfeEmpresaPermission, MdfeOperatorPermission
 from mdfe.services.consulta_service import ConsultaMdfeService
 from mdfe.services.exceptions import MdfeError
 
@@ -119,7 +119,7 @@ class ViagemViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=["post"],
         url_path="consultar-mdfe-abertos",
-        permission_classes=[MdfeOperatorPermission],
+        permission_classes=[MdfeEmpresaPermission],
     )
     def consultar_mdfe_abertos(self, request):
         try:

@@ -105,8 +105,14 @@ class ImportacaoViagemMdfeTests(TestCase):
             email="outro-viagem-mdfe@example.com",
             password="senha-forte",
         )
+        self.reader = User.objects.create_user(
+            "leitor-viagem-mdfe",
+            email="leitor-viagem-mdfe@example.com",
+            password="senha-forte",
+        )
         self.company = Empresa.objects.create(nome="Transportadora Sintética", slug="transportadora-sintetica")
         MembroEmpresa.objects.create(empresa=self.company, usuario=self.user, papel=MembroEmpresa.Papel.OPERADOR)
+        MembroEmpresa.objects.create(empresa=self.company, usuario=self.reader, papel=MembroEmpresa.Papel.LEITURA)
         self.configuration = ConfiguracaoFiscal.objects.create(
             empresa=self.company,
             razao_social="Transportadora Sintética Ltda",
@@ -310,6 +316,21 @@ class ImportacaoViagemMdfeTests(TestCase):
         response = self.client.post("/api/viagens/consultar-mdfe-abertos/", {}, format="json", **self.headers)
 
         self.assertEqual(response.status_code, 403)
+
+    def test_perfil_leitura_pode_consultar_mas_nao_salvar(self):
+        self.create_manifest()
+        self.client.force_authenticate(self.reader)
+
+        consult_response = self.consult()
+        import_response = self.client.post(
+            "/api/viagens/importar-mdfe-confirmados/",
+            {"registros": []},
+            format="json",
+            **self.headers,
+        )
+
+        self.assertEqual(consult_response.status_code, 200)
+        self.assertEqual(import_response.status_code, 403)
 
     def test_importacao_cria_viagem_normal_com_vinculo_atomico(self):
         manifest = self.create_manifest()

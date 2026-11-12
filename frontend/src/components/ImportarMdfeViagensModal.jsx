@@ -101,6 +101,8 @@ export default function ImportarMdfeViagensModal({ motoristas, onClose, onImport
   }, []);
 
   const manifests = (result?.manifestos || []).filter((item) => !ignoredKeys.includes(item.chave_mdfe));
+  const selectedCompany = companies.find((item) => String(item.id) === String(companyId));
+  const canImport = selectedCompany?.papel !== "LEITURA";
   const activeManifest = manifests.find((item) => item.chave_mdfe === activeKey) || null;
   const activeForm = activeManifest ? forms[activeManifest.chave_mdfe] : null;
 
@@ -148,7 +150,7 @@ export default function ImportarMdfeViagensModal({ motoristas, onClose, onImport
   });
 
   const save = async (keys) => {
-    if (!keys.length || saving) return;
+    if (!canImport || !keys.length || saving) return;
     setSaving(true);
     setError("");
     try {
@@ -197,6 +199,11 @@ export default function ImportarMdfeViagensModal({ motoristas, onClose, onImport
         </div>
 
         {error && <div className="mdfe-trip-error" role="alert">{error}</div>}
+        {!canImport && (
+          <div className="mdfe-trip-readonly" role="status">
+            Seu perfil pode consultar os MDF-e, mas somente ADMIN ou OPERADOR pode cadastrar viagens.
+          </div>
+        )}
 
         {result && (
           <div className="mdfe-trip-summary">
@@ -226,7 +233,7 @@ export default function ImportarMdfeViagensModal({ motoristas, onClose, onImport
                       <input
                         type="checkbox"
                         checked={selectedKeys.includes(manifest.chave_mdfe)}
-                        disabled={!importable}
+                        disabled={!canImport || !importable}
                         onChange={() => toggleSelection(manifest.chave_mdfe)}
                       />
                       Selecionar
@@ -339,7 +346,7 @@ export default function ImportarMdfeViagensModal({ motoristas, onClose, onImport
 
                   <div className="mdfe-trip-record-actions">
                     <button type="button" className="ignore" onClick={() => ignoreManifest(activeManifest.chave_mdfe)} disabled={saving}>Ignorar manifesto</button>
-                    <button className="mdfe-trip-save-one" type="button" onClick={() => save([activeManifest.chave_mdfe])} disabled={saving}>
+                    <button className="mdfe-trip-save-one" type="button" onClick={() => save([activeManifest.chave_mdfe])} disabled={!canImport || saving}>
                       {saving ? "Salvando…" : "Salvar viagem"}
                     </button>
                   </div>
@@ -351,7 +358,7 @@ export default function ImportarMdfeViagensModal({ motoristas, onClose, onImport
 
         <footer className="mdfe-trip-footer">
           <button type="button" className="cancel" onClick={onClose} disabled={saving}>Cancelar</button>
-          <button type="button" onClick={() => save(selectedKeys)} disabled={!selectedKeys.length || saving}>
+          <button type="button" onClick={() => save(selectedKeys)} disabled={!canImport || !selectedKeys.length || saving}>
             {saving ? "Salvando…" : `Salvar viagens selecionadas (${selectedKeys.length})`}
           </button>
         </footer>
