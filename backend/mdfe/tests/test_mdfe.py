@@ -264,6 +264,52 @@ class MdfeTests(TestCase):
         self.assertEqual(self.manifest.situacao, Manifesto.Situacao.ABERTO)
         self.assertEqual(self.manifest.xml_status, Manifesto.XmlStatus.ERRO)
 
+    def test_operador_pode_baixar_xml_armazenado_sem_alterar_o_registro(self):
+        xml = processed_mdfe_xml(access_key(), self.signing_key, self.signing_certificate)
+        encrypted = encrypt_secret(xml)
+        self.manifest.xml_criptografado = encrypted
+        self.manifest.xml_status = Manifesto.XmlStatus.DISPONIVEL
+        self.manifest.save(update_fields=("xml_criptografado", "xml_status"))
+        self.client.force_authenticate(self.operator)
+
+        response = self.client.get(
+            f"/api/mdfe/{self.manifest.chave}/xml/",
+            HTTP_X_EMPRESA_ID=self.company.id,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, xml)
+        self.assertEqual(response["Content-Type"], "application/xml; charset=utf-8")
+        self.assertEqual(response["Content-Disposition"], 'attachment; filename="mdfe-123.xml"')
+        self.assertIn("no-store", response["Cache-Control"])
+        self.manifest.refresh_from_db()
+        self.assertEqual(bytes(self.manifest.xml_criptografado), bytes(encrypted))
+
+    def test_download_xml_rejeita_perfil_somente_leitura(self):
+        xml = processed_mdfe_xml(access_key(), self.signing_key, self.signing_certificate)
+        self.manifest.xml_criptografado = encrypt_secret(xml)
+        self.manifest.xml_status = Manifesto.XmlStatus.DISPONIVEL
+        self.manifest.save(update_fields=("xml_criptografado", "xml_status"))
+        self.client.force_authenticate(self.reader)
+
+        response = self.client.get(
+            f"/api/mdfe/{self.manifest.chave}/xml/",
+            HTTP_X_EMPRESA_ID=self.company.id,
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+    def test_download_xml_informa_quando_blob_nao_esta_disponivel(self):
+        self.client.force_authenticate(self.operator)
+
+        response = self.client.get(
+            f"/api/mdfe/{self.manifest.chave}/xml/",
+            HTTP_X_EMPRESA_ID=self.company.id,
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.data["code"], "mdfe_xml_unavailable")
+
     def test_parser_do_portal_extrai_json_sem_executar_javascript(self):
         xml = b'<mdfeProc xmlns="http://www.portalfiscal.inf.br/mdfe">' + access_key().encode() + b'</mdfeProc>'
         page = (

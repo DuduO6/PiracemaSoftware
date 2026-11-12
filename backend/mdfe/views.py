@@ -3,6 +3,7 @@ from pathlib import Path
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q
+from django.http import HttpResponse
 from django.utils.text import slugify
 from rest_framework import permissions, status
 from rest_framework.pagination import PageNumberPagination
@@ -31,8 +32,8 @@ from .services.certificate_service import (
 from .services.consulta_service import ConsultaMdfeService
 from .services.encerramento_service import EncerramentoMdfeService
 from .services.exceptions import MdfeError
-from .services.validators import normalize_cnpj, normalize_uf
-from .services.xml_import_service import MAX_XML_BYTES, MdfeXmlImportService
+from .services.validators import normalize_cnpj, normalize_uf, validate_access_key
+from .services.xml_import_service import MAX_XML_BYTES, MdfeXmlImportService, parse_mdfe_proc_xml
 
 
 def error_response(exc):
@@ -220,6 +221,57 @@ class ManifestXmlImportView(APIView):
             {"importados": imported, "erros": errors, "total_importados": len(imported), "total_erros": len(errors)},
             status=response_status,
         )
+
+
+class ManifestXmlDownloadView(APIView):
+    permission_classes = (permissions.IsAuthenticated, MdfeOperatorPermission)
+
+    def get(self, request, chave):
+        manifest = Manifesto.objects.filter(
+            empresa=request.empresa_logistica,
+            chave=chave,
+        ).only(
+            "chave", "numero", "xml_criptografado", "xml_status"
+        ).first()
+        if not manifest:
+            return Response({"detail": "MDF-e não encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        if not manifest.xml_criptografado or manifest.xml_status != Manifesto.XmlStatus.DISPONIVEL:
+            return Response(
+                {
+                    "detail": "O XML deste MDF-e não está disponível para download.",
+                    "code": "mdfe_xml_unavailable",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        try:
+            xml_bytes = decrypt_secret(manifest.xml_criptografado)
+            root = parse_mdfe_proc_xml(xml_bytes)
+            info_nodes = root.xpath("./*[local-name()='MDFe']/*[local-name()='infMDFe']")
+            if len(info_nodes) != 1:
+                raise MdfeError(
+                    "O XML armazenado possui estrutura fiscal inválida.",
+                    code="invalid_stored_mdfe_xml",
+                    status_code=409,
+                )
+            xml_key = validate_access_key(info_nodes[0].get("Id", "").removeprefix("MDFe"))
+            if xml_key != manifest.chave:
+                raise MdfeError(
+                    "O XML armazenado não corresponde ao MDF-e solicitado.",
+                    code="stored_mdfe_key_mismatch",
+                    status_code=409,
+                )
+        except MdfeError as exc:
+            return error_response(exc)
+
+        number = str(int(manifest.numero)) if manifest.numero and manifest.numero.isdigit() else "documento"
+        response = HttpResponse(xml_bytes, content_type="application/xml; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="mdfe-{number}.xml"'
+        response["Cache-Control"] = "private, no-store, max-age=0"
+        response["Pragma"] = "no-cache"
+        response["X-Content-Type-Options"] = "nosniff"
+        response["X-Download-Options"] = "noopen"
+        return response
 
 
 class ManifestRefreshView(APIView):

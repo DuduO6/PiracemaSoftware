@@ -8,6 +8,7 @@ from .views import (
     ManifestHistoryView,
     ManifestListView,
     ManifestRefreshView,
+    ManifestXmlDownloadView,
     ManifestXmlImportView,
     OperationConfirmView,
     OperationDetailView,
@@ -23,6 +24,7 @@ urlpatterns = [
     path("configuracao/", FiscalConfigurationView.as_view(), name="mdfe-configuracao"),
     path("operacoes/<uuid:operation_id>/", OperationDetailView.as_view(), name="mdfe-operacao"),
     path("operacoes/<uuid:operation_id>/confirmar/", OperationConfirmView.as_view(), name="mdfe-operacao-confirmar"),
+    path("<str:chave>/xml/", ManifestXmlDownloadView.as_view(), name="mdfe-download-xml"),
     path("<str:chave>/encerrar/", ManifestCloseView.as_view(), name="mdfe-encerrar"),
     path("<str:chave>/", ManifestDetailView.as_view(), name="mdfe-detalhe"),
 ]

@@ -5,6 +5,7 @@ import UiIcon from "../components/UiIcon";
 import municipiosBrasil from "../data/municipiosBrasil.json";
 import {
   atualizarManifestos,
+  baixarXmlMdfe,
   confirmarOperacao,
   criarEmpresaMdfe,
   encerrarManifesto,
@@ -219,12 +220,22 @@ function EmptyState({ history, search, filter, consultation, lastSuccess }) {
   );
 }
 
-function ManifestActions({ manifest, history, onDetails, onClose }) {
+function ManifestActions({ manifest, history, canDownload, downloading, onDetails, onDownload, onClose }) {
   return (
     <div className="mdfe-row-actions">
       <button type="button" className="mdfe-btn ghost compact" onClick={() => onDetails(manifest)}>
         <UiIcon name="eye" size={16} /> Ver detalhes
       </button>
+      {canDownload && manifest.xml_status === "DISPONIVEL" && (
+        <button
+          type="button"
+          className="mdfe-btn ghost compact"
+          disabled={downloading}
+          onClick={() => onDownload(manifest)}
+        >
+          <UiIcon name="download" size={16} /> {downloading ? "Baixando…" : "Baixar XML"}
+        </button>
+      )}
       {manifest.situacao === "ABERTO" && !history && (
         <button type="button" className="mdfe-btn danger compact" onClick={() => onClose(manifest)}>
           Encerrar MDF-e
@@ -256,6 +267,7 @@ export default function ManifestosMdfe() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [downloadingKey, setDownloadingKey] = useState("");
   const [importSummary, setImportSummary] = useState(null);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null);
@@ -333,6 +345,40 @@ export default function ManifestosMdfe() {
       else setError(errorMessage(requestError));
     } finally {
       setImporting(false);
+    }
+  };
+
+  const downloadXml = async (manifest) => {
+    if (!manifest?.chave || downloadingKey) return;
+    setDownloadingKey(manifest.chave);
+    setError("");
+    try {
+      const response = await baixarXmlMdfe(manifest.chave);
+      const blob = response.data instanceof Blob
+        ? response.data
+        : new Blob([response.data], { type: "application/xml" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const number = Number(manifest.numero);
+      link.href = url;
+      link.download = `mdfe-${Number.isFinite(number) && number > 0 ? number : "documento"}.xml`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (requestError) {
+      let message = errorMessage(requestError);
+      if (requestError.response?.data instanceof Blob) {
+        try {
+          const payload = JSON.parse(await requestError.response.data.text());
+          message = payload.detail || message;
+        } catch (_parseError) {
+          // Mantém a mensagem genérica sem expor conteúdo inesperado da resposta.
+        }
+      }
+      setError(message);
+    } finally {
+      setDownloadingKey("");
     }
   };
 
@@ -542,7 +588,7 @@ export default function ManifestosMdfe() {
                       <td><StatusBadge status={manifest.situacao} label={manifest.situacao_display} />{manifest.xml_somente_informativo && <span className="mdfe-xml-badge">XML informativo</span>}</td>
                       <td>{formatDateTime(manifest.ultima_consulta_em)}</td>
                       <td><span className="mdfe-protocol">{manifest.protocolo_encerramento || manifest.protocolo_autorizacao || "—"}</span></td>
-                      <td><ManifestActions manifest={manifest} history={history} onDetails={setDetails} onClose={openClosing} /></td>
+                      <td><ManifestActions manifest={manifest} history={history} canDownload={canImport} downloading={downloadingKey === manifest.chave} onDetails={setDetails} onDownload={downloadXml} onClose={openClosing} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -562,7 +608,7 @@ export default function ManifestosMdfe() {
                 </dl>
                 {manifest.xml_somente_informativo && <span className="mdfe-card-note"><UiIcon name="info" size={15} /> Motorista e destino são apenas informativos.</span>}
                 <div className="mdfe-card-key"><span>Chave de acesso</span><KeyValue value={manifest.chave} /></div>
-                <ManifestActions manifest={manifest} history={history} onDetails={setDetails} onClose={openClosing} />
+                <ManifestActions manifest={manifest} history={history} canDownload={canImport} downloading={downloadingKey === manifest.chave} onDetails={setDetails} onDownload={downloadXml} onClose={openClosing} />
               </article>
             ))}
           </div>

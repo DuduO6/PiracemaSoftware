@@ -39,7 +39,7 @@ def _text(node, name):
     return str(values[0]).strip() if values else ""
 
 
-def _parse_xml(xml_bytes):
+def parse_mdfe_proc_xml(xml_bytes):
     if not xml_bytes or len(xml_bytes) > MAX_XML_BYTES:
         raise MdfeError("O XML deve ter conteúdo e no máximo 5 MB.", code="invalid_mdfe_xml")
     parser = etree.XMLParser(resolve_entities=False, no_network=True, recover=False, huge_tree=False)
@@ -136,7 +136,7 @@ class MdfeXmlImportService:
     def import_document(self, xml_bytes, *, source=Manifesto.XmlFonte.IMPORTACAO_MANUAL):
         if source not in Manifesto.XmlFonte.values:
             raise MdfeError("Origem do XML inválida.", code="invalid_xml_source")
-        root = _parse_xml(xml_bytes)
+        root = parse_mdfe_proc_xml(xml_bytes)
         validate_schema(root, "procMDFe_v3.00.xsd")
 
         info_nodes = root.xpath("./*[local-name()='MDFe']/*[local-name()='infMDFe']")

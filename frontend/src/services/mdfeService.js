@@ -7,6 +7,7 @@ export const criarEmpresaMdfe = () => api.post(`${raiz}/empresas/`);
 export const listarManifestos = (params = {}) => api.get(`${raiz}/pendentes/`, { params });
 export const atualizarManifestos = () => api.post(`${raiz}/atualizar/`);
 export const importarXmlMdfe = (formData) => api.post(`${raiz}/importar-xml/`, formData);
+export const baixarXmlMdfe = (chave) => api.get(`${raiz}/${chave}/xml/`, { responseType: "blob" });
 export const listarHistoricoMdfe = (params = {}) => api.get(`${raiz}/historico/`, { params });
 export const consultarManifesto = (chave) => api.get(`${raiz}/${chave}/`);
 export const encerrarManifesto = (chave, payload, idempotencyKey) => api.post(
