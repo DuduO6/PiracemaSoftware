@@ -136,7 +136,7 @@ function MunicipalityField({ uf, value, onSelect }) {
         placeholder="Digite ao menos 2 letras"
         autoComplete="off"
       />
-      {options.length > 0 && (
+      {options.length > 0 && query !== value?.label && (
         <div className="mdfe-options" role="listbox" aria-label="Municípios encontrados">
           {options.map((item) => (
             <button key={item.id} type="button" onClick={() => { onSelect(item); setQuery(item.label); }}>
